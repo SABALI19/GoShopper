@@ -172,8 +172,12 @@ function SignUpForm({
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.screen}
+    >
       <StatusBar style="light" />
+      <View style={styles.screenContent}>
       <Svg
         width={width}
         height={height}
@@ -191,18 +195,16 @@ function SignUpForm({
         {verifying ? "Verify your Account" : "Create your Account"}
       </Text>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={[
+      <View style={[
           styles.formArea,
           {
             top: `${spacing.signupFormTopPercent}%`,
             bottom: `${spacing.signupFormBottomPercent}%`,
           },
-        ]}
-      >
+        ]}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           contentContainerStyle={styles.formContent}
           showsVerticalScrollIndicator={false}
         >
@@ -273,7 +275,7 @@ function SignUpForm({
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
 
       {!verifying ? (
         <View style={styles.loginRow}>
@@ -286,7 +288,8 @@ function SignUpForm({
           </Pressable>
         </View>
       ) : null}
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -294,6 +297,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: darkColors.dark,
+  },
+  screenContent: {
+    flex: 1,
   },
   backgroundShape: {
     position: "absolute",

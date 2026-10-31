@@ -2,10 +2,11 @@ import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { useCartStore } from "../../../features/cart/store";
+import { checkReorderAvailability, type ReorderAvailability } from "../../../features/orders/reorder";
 import { getStoreById, stores } from "../../../features/stores/data";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 
@@ -31,7 +32,10 @@ const sampleOrders: MockOrder[] = [
 export default function OrdersScreen() {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<OrderFilter>("All");
-  const addItem = useCartStore((state) => state.addItem);
+  const addItems = useCartStore((state) => state.addItems);
+  const [checkingOrderId, setCheckingOrderId] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<ReorderAvailability | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
   const visibleOrders = selectedFilter === "All"
     ? sampleOrders
@@ -39,25 +43,49 @@ export default function OrdersScreen() {
 
   if (!fontsLoaded) return null;
 
-  const reorder = (order: MockOrder) => {
-    const store = getStoreById(order.storeId);
-    if (!store) return;
-    const orderProducts = order.lines.map((line) => ({
-      product: store.products.find((product) => product.id === line.productId),
-      quantity: line.quantity,
-    }));
-    if (!orderProducts.length || orderProducts.some((entry) => !entry.product)) {
-      router.push({ pathname: "/(customer)/store/[storeId]", params: { storeId: store.id } });
-      return;
+  const reorder = async (order: MockOrder) => {
+    setCheckingOrderId(`${order.storeId}:${order.id}`);
+    setAvailabilityError(null);
+    try {
+      const checked = await checkReorderAvailability({
+        orderId: order.id,
+        storeId: order.storeId,
+        lines: order.lines,
+      });
+      setAvailability(checked);
+    } catch {
+      setAvailabilityError("We couldn't check this store's availability. Please try again.");
+    } finally {
+      setCheckingOrderId(null);
     }
-    orderProducts.forEach(({ product, quantity }) => {
-      if (!product) return;
-      for (let count = 0; count < quantity; count += 1) {
-        addItem({ productId: product.id, storeId: store.id, name: product.name, description: product.description, unitPriceKobo: product.priceKobo, image: product.image });
-      }
+  };
+
+  const addAvailableItemsToCart = () => {
+    if (!availability) return;
+    const store = getStoreById(availability.storeId);
+    if (!store) return;
+
+    const availableLines = availability.lines.flatMap((line) => {
+      const product = store.products.find((candidate) => candidate.id === line.productId);
+      if (!product || line.availableQuantity < 1) return [];
+      return [{
+        productId: product.id,
+        storeId: store.id,
+        name: product.name,
+        description: product.description,
+        unitPriceKobo: line.currentPriceKobo ?? product.priceKobo,
+        image: product.image,
+        quantity: line.availableQuantity,
+      }];
     });
+
+    if (!availableLines.length) return;
+    addItems(availableLines);
+    setAvailability(null);
     router.push("/(customer)/cart");
   };
+
+  const availableQuantity = availability?.lines.reduce((sum, line) => sum + line.availableQuantity, 0) ?? 0;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
@@ -93,8 +121,10 @@ export default function OrdersScreen() {
                   <View style={[styles.statusBadge, statusStyles[order.status]]}>
                     <Text style={[styles.statusText, statusTextStyles[order.status]]}>{order.status}</Text>
                   </View>
-                  <Pressable accessibilityRole="button" onPress={() => reorder(order)} style={({ pressed }) => [styles.reorderButton, pressed && styles.pressed]}>
-                    <Text style={styles.reorderText}>Re Order</Text>
+                  <Pressable accessibilityRole="button" disabled={checkingOrderId !== null} onPress={() => void reorder(order)} style={({ pressed }) => [styles.reorderButton, pressed && styles.pressed, checkingOrderId !== null && styles.disabledButton]}>
+                    {checkingOrderId === `${order.storeId}:${order.id}`
+                      ? <ActivityIndicator color={darkColors.white} size="small" />
+                      : <Text style={styles.reorderText}>Re Order</Text>}
                   </Pressable>
                 </View>
               </View>
@@ -103,6 +133,54 @@ export default function OrdersScreen() {
           {visibleOrders.length === 0 ? <Text style={styles.emptyText}>No {selectedFilter.toLowerCase()} orders.</Text> : null}
         </View>
       </ScrollView>
+
+      <Modal animationType="slide" onRequestClose={() => setAvailability(null)} transparent visible={availability !== null || availabilityError !== null}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.reviewSheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.reviewTitle}>Check items for reorder</Text>
+            {availability ? (
+              <>
+                <Text style={styles.reviewStore}>{availability.storeName}</Text>
+                <Text style={styles.demoNotice}>Demo availability check. Stock and prices will need live server confirmation.</Text>
+                <ScrollView style={styles.reviewList} showsVerticalScrollIndicator={false}>
+                  {availability.lines.length ? availability.lines.map((line) => {
+                    const product = getStoreById(availability.storeId)?.products.find((item) => item.id === line.productId);
+                    return (
+                      <View key={`${line.productId}-${availability.storeId}`} style={styles.reviewItem}>
+                        {product ? <Image resizeMode="cover" source={product.image} style={styles.reviewImage} /> : null}
+                        <View style={styles.reviewItemInfo}>
+                          <Text numberOfLines={1} style={styles.reviewItemName}>{product?.name ?? "Item"}</Text>
+                          <Text style={styles.reviewItemQuantity}>
+                            {line.availableQuantity > 0
+                              ? `${line.availableQuantity} of ${line.requestedQuantity} available`
+                              : `0 of ${line.requestedQuantity} available`}
+                          </Text>
+                          {line.currentPriceKobo !== null ? <Text style={styles.reviewPrice}>{formatNaira(line.currentPriceKobo)}</Text> : null}
+                        </View>
+                        <Text style={[styles.availabilityStatus, line.status === "unavailable" ? styles.unavailableStatus : line.status === "limited" ? styles.limitedStatus : styles.availableStatus]}>
+                          {line.status === "limited" ? "Limited" : line.status === "available" ? "Available" : "Out of stock"}
+                        </Text>
+                      </View>
+                    );
+                  }) : <Text style={styles.reviewEmpty}>This demo order has no saved item lines to check.</Text>}
+                </ScrollView>
+                <Pressable accessibilityRole="button" disabled={availableQuantity === 0} onPress={addAvailableItemsToCart} style={({ pressed }) => [styles.addAvailableButton, pressed && styles.pressed, availableQuantity === 0 && styles.disabledButton]}>
+                  <Text style={styles.reorderText}>{availableQuantity ? "Add available items to cart" : "No available items"}</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={styles.reviewEmpty}>{availabilityError}</Text>
+                <Pressable accessibilityRole="button" onPress={() => setAvailabilityError(null)} style={styles.addAvailableButton}>
+                  <Text style={styles.reorderText}>Close</Text>
+                </Pressable>
+              </>
+            )}
+            {availability ? <Pressable accessibilityRole="button" onPress={() => setAvailability(null)} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable> : null}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -144,6 +222,28 @@ const styles = StyleSheet.create({
   statusText: { ...typography.homeCaption, fontFamily: "Poppins_700Bold", fontWeight: "700" },
   reorderButton: { minHeight: spacing.xl, minWidth: spacing.xxl + spacing.xs, paddingHorizontal: spacing.sm, alignItems: "center", justifyContent: "center", borderRadius: radius.sm, backgroundColor: darkColors.primary },
   reorderText: { ...typography.homeCaption, color: darkColors.white },
+  disabledButton: { opacity: 0.55 },
+  modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: darkColors.overlay },
+  reviewSheet: { maxHeight: "82%", paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xl, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, backgroundColor: darkColors.background },
+  sheetHandle: { width: spacing.xxl, height: spacing.xxs, marginBottom: spacing.md, alignSelf: "center", borderRadius: radius.round, backgroundColor: darkColors.mutedText },
+  reviewTitle: { ...typography.storeSection, color: darkColors.white, textAlign: "center" },
+  reviewStore: { ...typography.storeBody, marginTop: spacing.xxs, color: darkColors.primary, textAlign: "center" },
+  demoNotice: { ...typography.storeCaption, marginTop: spacing.sm, marginBottom: spacing.sm, color: darkColors.mutedText, textAlign: "center" },
+  reviewList: { flexGrow: 0 },
+  reviewItem: { minHeight: spacing.ordersLogoSize + spacing.sm, marginBottom: spacing.xs, padding: spacing.xs, flexDirection: "row", alignItems: "center", gap: spacing.xs, borderRadius: radius.md, backgroundColor: darkColors.storeSurface },
+  reviewImage: { width: spacing.ordersLogoSize, height: spacing.ordersLogoSize, borderRadius: radius.sm },
+  reviewItemInfo: { flex: 1 },
+  reviewItemName: { ...typography.storeCaption, color: darkColors.white },
+  reviewItemQuantity: { ...typography.storeCaption, color: darkColors.mutedText },
+  reviewPrice: { ...typography.storeCaption, color: darkColors.white },
+  availabilityStatus: { ...typography.homeCaption, fontFamily: "Poppins_700Bold", fontWeight: "700" },
+  availableStatus: { color: darkColors.success },
+  limitedStatus: { color: darkColors.warning },
+  unavailableStatus: { color: darkColors.error },
+  reviewEmpty: { ...typography.storeBody, marginVertical: spacing.lg, color: darkColors.mutedText, textAlign: "center" },
+  addAvailableButton: { minHeight: spacing.buttonHeight, marginTop: spacing.sm, alignItems: "center", justifyContent: "center", borderRadius: radius.round, backgroundColor: darkColors.primary },
+  cancelButton: { minHeight: spacing.buttonHeight, alignItems: "center", justifyContent: "center" },
+  cancelText: { ...typography.button, color: darkColors.mutedText },
   pressed: { opacity: 0.8 },
   emptyText: { ...typography.storeBody, padding: spacing.lg, color: darkColors.mutedText, textAlign: "center" },
 });

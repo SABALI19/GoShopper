@@ -105,8 +105,12 @@ function LoginForm({ onSubmit, busy = false, errorMessage = "" }: LoginFormProps
   const submit = () => onSubmit(identifier.trim(), password);
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.screen}
+    >
       <StatusBar style="light" />
+      <View style={styles.screenContent}>
       <Svg
         width={width}
         height={height * 0.49}
@@ -124,15 +128,14 @@ function LoginForm({ onSubmit, busy = false, errorMessage = "" }: LoginFormProps
         Welcome To Go-Shopper
       </Text>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={[styles.formArea, {
+      <View style={[styles.formArea, {
           top: `${spacing.loginFormTopPercent}%`,
           bottom: `${spacing.loginFormBottomPercent}%`,
         }]}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           contentContainerStyle={styles.formContent}
           showsVerticalScrollIndicator={false}
         >
@@ -178,7 +181,7 @@ function LoginForm({ onSubmit, busy = false, errorMessage = "" }: LoginFormProps
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
 
       <View style={styles.signupRow}>
         <Text style={styles.signupPrompt}>Don’t have an account? </Text>
@@ -189,7 +192,8 @@ function LoginForm({ onSubmit, busy = false, errorMessage = "" }: LoginFormProps
           <Text style={styles.signupLink}>Sign up</Text>
         </Pressable>
       </View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -197,6 +201,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: darkColors.dark,
+  },
+  screenContent: {
+    flex: 1,
   },
   headerShape: {
     position: "absolute",
