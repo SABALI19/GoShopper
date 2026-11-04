@@ -1,7 +1,5 @@
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "../../components/ui/Icon";
@@ -15,7 +13,6 @@ export default function CartScreen() {
   const lines = useCartStore((state) => state.lines);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
   const groupedLines = lines.reduce<Record<string, typeof lines>>((groups, line) => {
     groups[line.storeId] ??= [];
     groups[line.storeId].push(line);
@@ -23,8 +20,6 @@ export default function CartScreen() {
   }, {});
   const subtotalKobo = lines.reduce((sum, line) => sum + line.unitPriceKobo * line.quantity, 0);
   const deliveryFeeKobo = lines.length ? estimatedDeliveryFeeKobo : 0;
-
-  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>

@@ -1,8 +1,6 @@
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useUser } from "@clerk/expo";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { useState } from "react";
 import {
   Image,
@@ -38,14 +36,11 @@ export default function CheckoutScreen() {
   const [phone, setPhone] = useState(user?.primaryPhoneNumber?.phoneNumber ?? "");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [error, setError] = useState("");
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
 
   const subtotalKobo = lines.reduce((sum, line) => sum + line.unitPriceKobo * line.quantity, 0);
   const deliveryFeeKobo = lines.length ? estimatedDeliveryFeeKobo : 0;
   const couponDiscountKobo = lines.length ? Math.min(checkoutCouponDiscountKobo, subtotalKobo) : 0;
   const totalKobo = Math.max(0, subtotalKobo + deliveryFeeKobo - couponDiscountKobo);
-
-  if (!fontsLoaded) return null;
 
   const placeOrder = () => {
     if (!lines.length) {

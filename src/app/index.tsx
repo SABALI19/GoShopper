@@ -1,13 +1,8 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/expo";
-import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
-import {
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
 import { GoShopperBag } from "../components/GoShopperBag";
 import { lightColors, radius, spacing, typography } from "../theme";
 
@@ -35,20 +30,19 @@ function SplashContent({
   destination: "/(auth)/login" | "/(customer)/(tabs)";
   ready: boolean;
 }) {
-  const [fontsLoaded] = useFonts({ Poppins_500Medium, Poppins_700Bold });
   const router = useRouter();
 
   useEffect(() => {
-    if (!fontsLoaded || !ready) return;
+    if (!ready) return;
 
     const timer = setTimeout(() => {
       router.replace(destination);
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [destination, fontsLoaded, ready, router]);
+  }, [destination, ready, router]);
 
-  if (!fontsLoaded || !ready) return null;
+  if (!ready) return null;
 
   return (
     <View style={styles.screen}>

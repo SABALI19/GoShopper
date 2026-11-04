@@ -1,7 +1,5 @@
-import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../components/ui/Icon";
@@ -33,15 +31,12 @@ const methodInfo: Record<PaymentMethod, { title: string; icon: IconName; message
 export default function PaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ method?: string; amountKobo?: string }>();
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
   const method = isPaymentMethod(params.method) ? params.method : null;
   const amountKobo = Number(params.amountKobo);
   const info = method ? methodInfo[method] : null;
   const formattedAmount = Number.isSafeInteger(amountKobo) && amountKobo >= 0
     ? formatNaira(amountKobo)
     : "—";
-
-  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>

@@ -1,10 +1,8 @@
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { useCartStore } from "../../../features/cart/store";
 import { checkReorderAvailability, type ReorderAvailability } from "../../../features/orders/reorder";
 import { getStoreById, stores } from "../../../features/stores/data";
@@ -36,12 +34,9 @@ export default function OrdersScreen() {
   const [checkingOrderId, setCheckingOrderId] = useState<string | null>(null);
   const [availability, setAvailability] = useState<ReorderAvailability | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
   const visibleOrders = selectedFilter === "All"
     ? sampleOrders
     : sampleOrders.filter((order) => order.status === selectedFilter);
-
-  if (!fontsLoaded) return null;
 
   const reorder = async (order: MockOrder) => {
     setCheckingOrderId(`${order.storeId}:${order.id}`);

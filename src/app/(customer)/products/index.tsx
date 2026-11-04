@@ -1,4 +1,3 @@
-import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -11,11 +10,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
 import { Icon } from "../../../components/ui/Icon";
 import { useCartStore } from "../../../features/cart/store";
 import { stores } from "../../../features/stores/data";
@@ -26,14 +20,11 @@ export default function ProductsScreen() {
   const { search } = useLocalSearchParams<{ search?: string }>();
   const { width } = useWindowDimensions();
   const itemCount = useCartStore((state) => state.lines.reduce((sum, line) => sum + line.quantity, 0));
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
   const products = stores.flatMap((store) => store.products.map((product) => ({ ...product, store })));
   const visibleProducts = search
     ? products.filter((product) => product.name.toLowerCase().includes(search.toLowerCase()))
     : products;
   const cardWidth = (width - spacing.explorePageInset * 2 - spacing.exploreProductCardGap) / 2;
-
-  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>

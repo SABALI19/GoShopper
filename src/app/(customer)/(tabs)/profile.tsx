@@ -1,8 +1,6 @@
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useClerk, useUser } from "@clerk/expo";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../../components/ui/Icon";
@@ -68,9 +66,6 @@ function SignedInProfile() {
 
 function ProfileContent({ name, email, imageUrl, onLogout }: ProfileProps) {
   const router = useRouter();
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
-  if (!fontsLoaded) return null;
-
   const openSection = (section: string) => {
     if (section === "personal-info") {
       router.push("/(customer)/profile/edit");

@@ -1,8 +1,6 @@
 import { useSignIn } from "@clerk/expo";
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -42,10 +40,6 @@ function ClerkRecoveryFlow() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [requestError, setRequestError] = useState("");
   const codeInputRef = useRef<TextInput>(null);
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
-
-  if (!fontsLoaded) return null;
-
   const busy = fetchStatus === "fetching";
   const codeCellCount = Math.max(4, code.length);
 
@@ -345,8 +339,6 @@ function SuccessArtwork() {
 
 function MissingClerkConfiguration() {
   const router = useRouter();
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
-  if (!fontsLoaded) return null;
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="light" />

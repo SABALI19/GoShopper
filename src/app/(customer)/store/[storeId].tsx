@@ -1,7 +1,6 @@
-import { useFonts } from "expo-font";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -12,14 +11,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
 import { Icon, type IconName } from "../../../components/ui/Icon";
 import { useCartStore } from "../../../features/cart/store";
-import { getStoreById } from "../../../features/stores/data";
+import { getStoreById, type StoreInfo } from "../../../features/stores/data";
+import { fetchStore, fetchStoreProducts } from "../../../features/stores/api";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 
 type StoreTab = "All Products" | "Categories" | "About Store";
@@ -28,23 +23,36 @@ const tabs: StoreTab[] = ["All Products", "Categories", "About Store"];
 export default function StoreScreen() {
   const router = useRouter();
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
-  const store = getStoreById(storeId ?? "");
+  const localStore = getStoreById(storeId ?? "");
+  const [remoteStore, setRemoteStore] = useState<StoreInfo | null>(null);
+  const [remoteProducts, setRemoteProducts] = useState<StoreInfo["products"] | null>(null);
+  useEffect(() => {
+    if (!storeId) return;
+    let active = true;
+    Promise.all([fetchStore(storeId), fetchStoreProducts(storeId)]).then(([storeResult, productResult]) => {
+      if (!active) return;
+      if (storeResult) setRemoteStore(storeResult);
+      if (productResult) setRemoteProducts(productResult);
+    }).catch((error) => {
+      if (__DEV__) console.warn("Could not load store catalog from Go-Shopper API", error);
+    });
+    return () => { active = false; };
+  }, [storeId]);
+  const store = remoteStore ?? localStore;
   const { width } = useWindowDimensions();
   const addItem = useCartStore((state) => state.addItem);
   const itemCount = useCartStore((state) => state.lines.reduce((sum, line) => sum + line.quantity, 0));
   const [selectedTab, setSelectedTab] = useState<StoreTab>("All Products");
   const [selectedProductCategory, setSelectedProductCategory] = useState<string | null>(null);
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
 
   const productWidth = useMemo(
     () => (width - spacing.storePageInset * 2 - spacing.storeProductGap) / 2,
     [width],
   );
   const visibleProducts = selectedProductCategory
-    ? store?.products.filter((product) => product.category === selectedProductCategory) ?? []
-    : store?.products ?? [];
+    ? (remoteProducts ?? store?.products)?.filter((product) => product.category === selectedProductCategory) ?? []
+    : remoteProducts ?? store?.products ?? [];
 
-  if (!fontsLoaded) return null;
   if (!store) {
     return (
       <SafeAreaView style={styles.screen}>

@@ -1,11 +1,9 @@
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { useUser } from "@clerk/expo";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { Button } from "../../../components/ui/Button";
 import { TextField } from "../../../components/ui/TextField";
 import { Icon } from "../../../components/ui/Icon";
@@ -17,10 +15,6 @@ export default function EditProfileScreen() {
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [busy, setBusy] = useState(false);
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
-
-  if (!fontsLoaded) return null;
-
   const saveProfile = async () => {
     if (!user) return;
     setBusy(true);

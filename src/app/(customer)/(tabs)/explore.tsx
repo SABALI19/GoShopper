@@ -1,7 +1,6 @@
-import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -13,14 +12,11 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
 import { Icon } from "../../../components/ui/Icon";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 import { stores } from "../../../features/stores/data";
+import { fetchStores } from "../../../features/stores/api";
+import type { StoreInfo } from "../../../features/stores/data";
 
 const popularStores = [
   { storeId: "fashion-hub", name: "Fashion Hub", image: require("../../../../assets/images/explore/store-fashion.png") },
@@ -47,23 +43,39 @@ export default function ExploreScreen() {
   const [query, setQuery] = useState("");
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
-  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_700Bold });
+  const [remoteStores, setRemoteStores] = useState<StoreInfo[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchStores().then((result) => {
+      if (active && result?.length) setRemoteStores(result);
+    }).catch((error) => {
+      if (__DEV__) console.warn("Could not load stores from Go-Shopper API", error);
+    });
+    return () => { active = false; };
+  }, []);
 
   const visibleStores = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return popularStores.filter((store) => {
+    const source = remoteStores?.map((store) => ({
+      storeId: store.id,
+      name: store.name,
+      image: store.logo,
+      category: store.category,
+    })) ?? popularStores.map((store) => ({
+      ...store,
+      category: stores.find((item) => item.id === store.storeId)?.category || "",
+    }));
+    return source.filter((store) => {
       const matchesText = store.name.toLowerCase().includes(normalizedQuery);
-      const storeDetails = stores.find((item) => item.id === store.storeId);
-      const matchesFilter = selectedFilter === "All" || storeDetails?.category === selectedFilter;
+      const matchesFilter = selectedFilter === "All" || store.category === selectedFilter;
       return matchesText && matchesFilter;
     });
-  }, [query, selectedFilter]);
+  }, [query, remoteStores, selectedFilter]);
 
   const visibleProducts = trendingProducts.filter((product) =>
     product.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
-
-  if (!fontsLoaded) return null;
 
   const categoryWidth = (width - spacing.explorePageInset * 2 - spacing.exploreCategoryColumnGap) / 2;
 

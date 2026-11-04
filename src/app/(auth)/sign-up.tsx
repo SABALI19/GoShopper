@@ -1,5 +1,4 @@
 import { useSignUp } from "@clerk/expo";
-import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
@@ -15,11 +14,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
 import { GoShopperBag } from "../../components/GoShopperBag";
@@ -144,19 +138,12 @@ function SignUpForm({
   verificationMethod,
 }: SignUpFormProps) {
   const { width, height } = useWindowDimensions();
-  const [fontsLoaded] = useFonts({
-    Poppins_400Regular,
-    Poppins_500Medium,
-    Poppins_700Bold,
-  });
   const [fullName, setFullName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
   const [localError, setLocalError] = useState("");
-
-  if (!fontsLoaded) return null;
 
   const submit = async () => {
     setLocalError("");

@@ -1,6 +1,5 @@
-import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -12,15 +11,12 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
 import { Icon, type IconName } from "../../../components/ui/Icon";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 import { useRouter } from "expo-router";
 import { stores } from "../../../features/stores/data";
+import { fetchStores } from "../../../features/stores/api";
+import type { StoreInfo } from "../../../features/stores/data";
 
 type Category = {
   name: string;
@@ -50,26 +46,32 @@ const offers = [
 export default function CustomerHomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const [fontsLoaded] = useFonts({
-    Poppins_400Regular,
-    Poppins_500Medium,
-    Poppins_700Bold,
-  });
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [remoteStores, setRemoteStores] = useState<StoreInfo[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchStores().then((result) => {
+      if (active && result?.length) setRemoteStores(result);
+    }).catch((error) => {
+      if (__DEV__) console.warn("Could not load stores from Go-Shopper API", error);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const storeCatalog = remoteStores ?? stores;
 
   const visibleStores = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return stores.filter((store) => {
+    return storeCatalog.filter((store) => {
       if (store.showOnHome === false) return false;
       const matchesCategory =
         selectedCategory === "All" || store.category === selectedCategory;
       const matchesQuery = store.name.toLowerCase().includes(normalizedQuery);
       return matchesCategory && matchesQuery;
     });
-  }, [query, selectedCategory]);
-
-  if (!fontsLoaded) return null;
+  }, [query, selectedCategory, storeCatalog]);
 
   const storeWidth =
     (width - spacing.homePageInset * 2 - spacing.homeGridGap) / 2;
@@ -178,7 +180,7 @@ export default function CustomerHomeScreen() {
   );
 }
 
-function StoreCard({ store, width, onPress }: { store: (typeof stores)[number]; width: number; onPress: () => void }) {
+function StoreCard({ store, width, onPress }: { store: StoreInfo; width: number; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={[styles.storeCard, { width }]}>
       <Image
