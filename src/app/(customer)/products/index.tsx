@@ -3,7 +3,6 @@ import { StatusBar } from "expo-status-bar";
 import {
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "../../../components/ui/Icon";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { useCartStore } from "../../../features/cart/store";
 import { stores } from "../../../features/stores/data";
 import { darkColors, radius, spacing, typography } from "../../../theme";
@@ -29,7 +29,7 @@ export default function ProductsScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      <RefreshableScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <Pressable accessibilityLabel="Go back" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
           <Icon color={darkColors.white} name="back" size={spacing.lg} />
         </Pressable>
@@ -51,6 +51,7 @@ export default function ProductsScreen() {
                   onPress={() => useCartStore.getState().addItem({
                     productId: product.id,
                     storeId: store.id,
+                    storeName: store.name,
                     name: product.name,
                     description: product.description,
                     unitPriceKobo: product.priceKobo,
@@ -70,7 +71,7 @@ export default function ProductsScreen() {
             <Text style={styles.emptyText}>Try another search or browse a store catalog.</Text>
           </View>
         )}
-      </ScrollView>
+      </RefreshableScrollView>
       <Pressable accessibilityLabel={`Open cart, ${itemCount} items`} onPress={() => router.push("/(customer)/cart")} style={styles.cartFab}>
         <Icon color={darkColors.white} name="cart" size={spacing.lg} />
         {itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? "99+" : itemCount}</Text></View> : null}

@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useClerk, useUser } from "@clerk/expo";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../../components/ui/Icon";
 import { darkColors, radius, spacing, typography } from "../../../theme";
@@ -77,7 +78,7 @@ function ProfileContent({ name, email, imageUrl, onLogout }: ProfileProps) {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      <RefreshableScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <View style={styles.identity}>
           <Image
             accessibilityLabel={`${name} profile photo`}
@@ -120,7 +121,7 @@ function ProfileContent({ name, email, imageUrl, onLogout }: ProfileProps) {
             <Icon color={darkColors.white} name="chevron" size={spacing.md} />
           </Pressable>
         </View>
-      </ScrollView>
+      </RefreshableScrollView>
     </SafeAreaView>
   );
 }

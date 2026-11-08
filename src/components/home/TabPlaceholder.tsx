@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Poppins_400Regular, Poppins_500Medium } from "@expo-google-fonts/poppins";
 import { EmptyState } from "../ui/EmptyState";
+import { RefreshableScrollView } from "../ui/RefreshableScrollView";
 import { type IconName } from "../ui/Icon";
 import { darkColors } from "../../theme";
 
@@ -20,7 +21,9 @@ export function TabPlaceholder({ icon, title, description }: TabPlaceholderProps
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: darkColors.background }}>
       <StatusBar style="light" />
-      <EmptyState icon={icon} title={title} description={description} />
+      <RefreshableScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <EmptyState icon={icon} title={title} description={description} />
+      </RefreshableScrollView>
     </SafeAreaView>
   );
 }

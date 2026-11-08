@@ -1,10 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../../components/ui/Icon";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { useCartStore } from "../../../features/cart/store";
 import { getStoreById, type StoreInfo } from "../../../features/stores/data";
 import { fetchStore, fetchStoreProducts } from "../../../features/stores/api";
@@ -26,18 +26,21 @@ export default function StoreScreen() {
   const localStore = getStoreById(storeId ?? "");
   const [remoteStore, setRemoteStore] = useState<StoreInfo | null>(null);
   const [remoteProducts, setRemoteProducts] = useState<StoreInfo["products"] | null>(null);
-  useEffect(() => {
+  const refreshStore = useCallback(async () => {
     if (!storeId) return;
-    let active = true;
-    Promise.all([fetchStore(storeId), fetchStoreProducts(storeId)]).then(([storeResult, productResult]) => {
-      if (!active) return;
-      if (storeResult) setRemoteStore(storeResult);
-      if (productResult) setRemoteProducts(productResult);
-    }).catch((error) => {
+    const [storeResult, productResult] = await Promise.all([
+      fetchStore(storeId),
+      fetchStoreProducts(storeId),
+    ]);
+    if (storeResult) setRemoteStore(storeResult);
+    if (productResult) setRemoteProducts(productResult);
+  }, [storeId]);
+
+  useEffect(() => {
+    void Promise.resolve().then(refreshStore).catch((error) => {
       if (__DEV__) console.warn("Could not load store catalog from Go-Shopper API", error);
     });
-    return () => { active = false; };
-  }, [storeId]);
+  }, [refreshStore]);
   const store = remoteStore ?? localStore;
   const { width } = useWindowDimensions();
   const addItem = useCartStore((state) => state.addItem);
@@ -69,7 +72,7 @@ export default function StoreScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      <RefreshableScrollView contentContainerStyle={styles.page} refreshAction={refreshStore} showsVerticalScrollIndicator={false}>
         <Pressable accessibilityLabel="Go back" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
           <Icon color={darkColors.white} name="back" size={spacing.lg} />
         </Pressable>
@@ -129,6 +132,7 @@ export default function StoreScreen() {
                     onPress={() => addItem({
                       productId: product.id,
                       storeId: store.id,
+                      storeName: store.name,
                       name: product.name,
                       description: product.description,
                       unitPriceKobo: product.priceKobo,
@@ -186,7 +190,7 @@ export default function StoreScreen() {
             <StoreEmpty text="Store information will appear here when it has been provided." />
           )
         ) : null}
-      </ScrollView>
+      </RefreshableScrollView>
 
       <Pressable accessibilityLabel={`Open cart, ${itemCount} items`} onPress={() => router.push("/(customer)/cart")} style={styles.cartFab}>
         <Icon color={darkColors.white} name="cart" size={spacing.lg} />

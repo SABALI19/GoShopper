@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
-import { useAuth } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import { GoShopperBag } from "../components/GoShopperBag";
@@ -18,16 +18,26 @@ export default function SplashScreen() {
 
 function ClerkSplash() {
   const { isLoaded, isSignedIn } = useAuth();
-  const destination = isSignedIn ? "/(customer)/(tabs)" : "/(auth)/login";
+  const { isLoaded: userLoaded, user } = useUser();
+  const role = user?.publicMetadata.role;
+  const destination = !isSignedIn
+    ? "/(auth)/login"
+    : role === "supermarket"
+      ? "/(supermarket)/(tabs)"
+      : role === "admin"
+        ? "/(admin)"
+        : role === "rider"
+          ? "/(rider)/(tabs)"
+        : "/(customer)/(tabs)";
 
-  return <SplashContent destination={destination} ready={isLoaded} />;
+  return <SplashContent destination={destination} ready={isLoaded && (!isSignedIn || userLoaded)} />;
 }
 
 function SplashContent({
   destination,
   ready,
 }: {
-  destination: "/(auth)/login" | "/(customer)/(tabs)";
+  destination: "/(auth)/login" | "/(customer)/(tabs)" | "/(supermarket)/(tabs)" | "/(admin)" | "/(rider)/(tabs)";
   ready: boolean;
 }) {
   const router = useRouter();
@@ -36,7 +46,7 @@ function SplashContent({
     if (!ready) return;
 
     const timer = setTimeout(() => {
-      router.replace(destination);
+      router.replace(destination as never);
     }, 1500);
 
     return () => clearTimeout(timer);

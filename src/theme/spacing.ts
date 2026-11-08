@@ -126,6 +126,7 @@ export const spacing = {
   checkoutCardGap: 4,
   checkoutRadioSize: 20,
   checkoutOrderRowGap: 12,
+  metricCardHeight: 116,
   recoveryPageInset: 16,
   recoveryBackSize: 30,
   recoveryTopInset: 16,

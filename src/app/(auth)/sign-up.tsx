@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Button } from "../../components/ui/Button";
+import { RefreshableScrollView } from "../../components/ui/RefreshableScrollView";
 import { TextField } from "../../components/ui/TextField";
 import { GoShopperBag } from "../../components/GoShopperBag";
 import { darkColors, lightColors, spacing, typography } from "../../theme";
@@ -189,7 +189,7 @@ function SignUpForm({
             bottom: `${spacing.signupFormBottomPercent}%`,
           },
         ]}>
-        <ScrollView
+        <RefreshableScrollView
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           contentContainerStyle={styles.formContent}
@@ -261,7 +261,7 @@ function SignUpForm({
               title={verifying ? "Verify" : "Sign Up"}
             />
           </View>
-        </ScrollView>
+        </RefreshableScrollView>
       </View>
 
       {!verifying ? (

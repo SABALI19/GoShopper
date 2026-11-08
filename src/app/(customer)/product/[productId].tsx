@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "../../../components/ui/Icon";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { useCartStore } from "../../../features/cart/store";
 import { getStoreById, stores } from "../../../features/stores/data";
 import { darkColors, radius, spacing, typography } from "../../../theme";
@@ -30,7 +31,7 @@ export default function ProductDetailScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      <RefreshableScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <Pressable accessibilityLabel="Go back" onPress={() => router.back()} style={styles.backButton}>
           <Icon color={darkColors.white} name="back" size={spacing.lg} />
         </Pressable>
@@ -41,13 +42,13 @@ export default function ProductDetailScreen() {
         <Text style={styles.price}>{formatNaira(product.priceKobo)}</Text>
         <Pressable
           accessibilityRole="button"
-          onPress={() => addItem({ productId: product.id, storeId: store.id, name: product.name, description: product.description, unitPriceKobo: product.priceKobo, image: product.image })}
+          onPress={() => addItem({ productId: product.id, storeId: store.id, storeName: store.name, name: product.name, description: product.description, unitPriceKobo: product.priceKobo, image: product.image })}
           style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
         >
           <Icon color={darkColors.white} name="cart" size={spacing.md} />
           <Text style={styles.addLabel}>Add to Cart</Text>
         </Pressable>
-      </ScrollView>
+      </RefreshableScrollView>
       <Pressable accessibilityLabel={`Open cart, ${itemCount} items`} onPress={() => router.push("/(customer)/cart")} style={styles.cartFab}>
         <Icon color={darkColors.white} name="cart" size={spacing.lg} />
         {itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? "99+" : itemCount}</Text></View> : null}

@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import { Button } from "../../components/ui/Button";
+import { RefreshableScrollView } from "../../components/ui/RefreshableScrollView";
 import { Icon } from "../../components/ui/Icon";
 import { darkColors, radius, spacing, typography } from "../../theme";
 
@@ -174,7 +174,7 @@ function ClerkRecoveryFlow() {
 
         {step === "identifier" ? (
           <>
-            <ScrollView contentContainerStyle={styles.identifierContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <RefreshableScrollView contentContainerStyle={styles.identifierContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <LockArtwork />
               <Text style={styles.centerTitle}>Forgot Password</Text>
               <Text style={styles.centerDescription}>Enter your email address/ Phone No for recovery of your account</Text>
@@ -192,7 +192,7 @@ function ClerkRecoveryFlow() {
                 value={identifier}
               />
               {requestError ? <Text accessibilityRole="alert" style={styles.errorText}>{requestError}</Text> : null}
-            </ScrollView>
+            </RefreshableScrollView>
             <View style={styles.bottomAction}>
               <Button disabled={!identifier.trim()} loading={busy} onPress={() => void sendCode()} title="Send Verification Code" />
             </View>
@@ -201,7 +201,7 @@ function ClerkRecoveryFlow() {
 
         {step === "code" ? (
           <>
-            <ScrollView contentContainerStyle={styles.codeContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <RefreshableScrollView contentContainerStyle={styles.codeContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <ShieldArtwork />
               <Text style={styles.centerTitle}>Verification Code</Text>
               <Text style={styles.centerDescription}>Enter the verification code that we have sent to you</Text>
@@ -230,7 +230,7 @@ function ClerkRecoveryFlow() {
                   <Text style={styles.resendAction}>Resend Code</Text>
                 </Pressable>
               </View>
-            </ScrollView>
+            </RefreshableScrollView>
             <View style={styles.bottomAction}>
               <Button disabled={code.length < 4} loading={busy} onPress={() => void verifyCode()} title="Verify code" />
             </View>
@@ -239,7 +239,7 @@ function ClerkRecoveryFlow() {
 
         {step === "password" ? (
           <>
-            <ScrollView contentContainerStyle={styles.passwordContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <RefreshableScrollView contentContainerStyle={styles.passwordContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={styles.passwordTitle}>Create New Password</Text>
               <View style={styles.passwordFields}>
                 <PasswordField
@@ -260,7 +260,7 @@ function ClerkRecoveryFlow() {
                 />
               </View>
               {requestError ? <Text accessibilityRole="alert" style={styles.errorText}>{requestError}</Text> : null}
-            </ScrollView>
+            </RefreshableScrollView>
             <View style={styles.bottomAction}>
               <Button disabled={!password || !confirmPassword} loading={busy} onPress={() => void resetPassword()} title="Reset Password" />
             </View>

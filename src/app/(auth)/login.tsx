@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Button } from "../../components/ui/Button";
+import { RefreshableScrollView } from "../../components/ui/RefreshableScrollView";
 import { TextField } from "../../components/ui/TextField";
 import { GoShopperBag } from "../../components/GoShopperBag";
 import { darkColors, lightColors, radius, spacing, typography } from "../../theme";
@@ -254,7 +254,7 @@ function SecondFactorForm({
         <Text style={[styles.title, { top: `${spacing.loginTitleTopPercent}%` }]}>Verify It’s You</Text>
 
         <View style={[styles.formArea, styles.secondFactorArea]}>
-          <ScrollView
+          <RefreshableScrollView
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             contentContainerStyle={styles.secondFactorContent}
@@ -305,7 +305,7 @@ function SecondFactorForm({
             <Pressable accessibilityRole="button" onPress={onBack} style={styles.backToPassword}>
               <Text style={styles.signupLink}>Back to password sign in</Text>
             </Pressable>
-          </ScrollView>
+          </RefreshableScrollView>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -348,7 +348,7 @@ function LoginForm({ onSubmit, busy = false, errorMessage = "" }: LoginFormProps
           bottom: `${spacing.loginFormBottomPercent}%`,
         }]}
       >
-        <ScrollView
+        <RefreshableScrollView
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           contentContainerStyle={styles.formContent}
@@ -395,7 +395,7 @@ function LoginForm({ onSubmit, busy = false, errorMessage = "" }: LoginFormProps
               title="Log In"
             />
           </View>
-        </ScrollView>
+        </RefreshableScrollView>
       </View>
 
       <View style={styles.signupRow}>

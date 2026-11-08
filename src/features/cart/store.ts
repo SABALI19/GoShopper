@@ -1,9 +1,12 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ImageSourcePropType } from "react-native";
 
 export type CartLine = {
   productId: string;
   storeId: string;
+  storeName?: string;
   name: string;
   unitPriceKobo: number;
   image: ImageSourcePropType;
@@ -13,14 +16,19 @@ export type CartLine = {
 
 type CartState = {
   lines: CartLine[];
+  hasHydrated: boolean;
   addItem: (line: Omit<CartLine, "quantity">) => void;
   addItems: (lines: CartLine[]) => void;
   setQuantity: (productId: string, storeId: string, quantity: number) => void;
   removeItem: (productId: string, storeId: string) => void;
+  removeStore: (storeId: string) => void;
+  clearCart: () => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 };
 
-export const useCartStore = create<CartState>((set) => ({
+export const useCartStore = create<CartState>()(persist((set) => ({
   lines: [],
+  hasHydrated: false,
   addItem: (newLine) => set((state) => {
     const existing = state.lines.find(
       (line) => line.productId === newLine.productId && line.storeId === newLine.storeId,
@@ -57,4 +65,20 @@ export const useCartStore = create<CartState>((set) => ({
   removeItem: (productId, storeId) => set((state) => ({
     lines: state.lines.filter((line) => line.productId !== productId || line.storeId !== storeId),
   })),
+  removeStore: (storeId) => set((state) => ({
+    lines: state.lines.filter((line) => line.storeId !== storeId),
+  })),
+  clearCart: () => set({ lines: [] }),
+  setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+}), {
+  name: "go-shopper-cart-v1",
+  storage: createJSONStorage(() => AsyncStorage),
+  partialize: (state) => ({ lines: state.lines }),
+  skipHydration: true,
+  onRehydrateStorage: () => (state, error) => {
+    if (state) state.setHasHydrated(true);
+    else if (error) useCartStore.setState({ hasHydrated: true });
+  },
 }));
+
+void useCartStore.persist.rehydrate();

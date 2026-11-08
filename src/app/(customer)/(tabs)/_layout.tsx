@@ -1,7 +1,13 @@
 import { Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../../components/ui/Icon";
 import { darkColors, radius, spacing, typography } from "../../../theme";
+
+// Tweak these to taste
+const EXTRA_BAR_HEIGHT = 16; // added on top of spacing.tabBarHeight
+const ICON_BOX_EXTRA = 8; // makes the active pill bigger
+const ICON_LABEL_GAP = 6; // space between icon and label
 
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
@@ -16,13 +22,21 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
 }
 
 export default function CustomerTabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: darkColors.primary,
         tabBarInactiveTintColor: darkColors.tabInactive,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: spacing.tabBarHeight + EXTRA_BAR_HEIGHT + insets.bottom,
+            paddingBottom: Math.max(insets.bottom, spacing.xs),
+          },
+        ],
         tabBarItemStyle: styles.tabItem,
         tabBarLabelStyle: styles.tabLabel,
         sceneStyle: styles.scene,
@@ -71,23 +85,22 @@ const styles = StyleSheet.create({
     backgroundColor: darkColors.background,
   },
   tabBar: {
-    height: spacing.tabBarHeight,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.xxs,
+    paddingTop: spacing.sm,
     backgroundColor: darkColors.tabBar,
     borderTopWidth: 0,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
   },
   tabItem: {
-    paddingTop: spacing.xxs,
+    paddingTop: spacing.xs,
   },
   tabLabel: {
     ...typography.tabLabel,
+    marginTop: ICON_LABEL_GAP,
   },
   iconBox: {
-    width: spacing.tabIconActiveBox,
-    height: spacing.tabIconActiveBox,
+    width: spacing.tabIconActiveBox + ICON_BOX_EXTRA,
+    height: spacing.tabIconActiveBox + ICON_BOX_EXTRA,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: radius.round,

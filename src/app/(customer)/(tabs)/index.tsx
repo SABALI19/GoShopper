@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../../components/ui/Icon";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 import { useRouter } from "expo-router";
 import { stores } from "../../../features/stores/data";
@@ -80,9 +81,13 @@ export default function CustomerHomeScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <StatusBar style="light" />
-      <ScrollView
+      <RefreshableScrollView
         contentContainerStyle={styles.pageContent}
         keyboardShouldPersistTaps="handled"
+        refreshAction={async () => {
+          const result = await fetchStores();
+          if (result?.length) setRemoteStores(result);
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -175,7 +180,7 @@ export default function CustomerHomeScreen() {
             <Text style={styles.noResultsText}>Try another name or category.</Text>
           </View>
         )}
-      </ScrollView>
+      </RefreshableScrollView>
     </SafeAreaView>
   );
 }

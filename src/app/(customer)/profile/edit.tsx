@@ -2,11 +2,12 @@ import { useRouter } from "expo-router";
 import { useUser } from "@clerk/expo";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../../components/ui/Button";
 import { TextField } from "../../../components/ui/TextField";
 import { Icon } from "../../../components/ui/Icon";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 
 export default function EditProfileScreen() {
@@ -37,7 +38,7 @@ export default function EditProfileScreen() {
         </Pressable>
         <Text style={styles.title}>Edit Profile</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      <RefreshableScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         <TextField autoCapitalize="words" label="First Name" onChangeText={setFirstName} placeholder="Enter your first name" value={firstName} />
         <TextField autoCapitalize="words" label="Last Name" onChangeText={setLastName} placeholder="Enter your last name" value={lastName} />
         <View style={styles.readOnlyField}>
@@ -45,7 +46,7 @@ export default function EditProfileScreen() {
           <Text style={styles.readOnlyValue}>{user?.primaryEmailAddress?.emailAddress ?? "No email address"}</Text>
         </View>
         <Button loading={busy} onPress={saveProfile} title="Save Changes" />
-      </ScrollView>
+      </RefreshableScrollView>
     </SafeAreaView>
   );
 }

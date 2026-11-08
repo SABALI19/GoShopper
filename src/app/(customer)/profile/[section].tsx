@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EmptyState } from "../../../components/ui/EmptyState";
+import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { Icon } from "../../../components/ui/Icon";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { darkColors, radius, spacing, typography } from "../../../theme";
@@ -28,13 +29,16 @@ export default function ProfileSectionScreen() {
         </Pressable>
         <Text style={styles.title}>{content.title}</Text>
       </View>
-      <EmptyState icon={content.icon} title={content.title} description={content.description} />
+      <RefreshableScrollView contentContainerStyle={styles.page}>
+        <EmptyState icon={content.icon} title={content.title} description={content.description} />
+      </RefreshableScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: darkColors.background },
+  page: { flexGrow: 1 },
   header: { paddingHorizontal: spacing.md, flexDirection: "row", alignItems: "center", gap: spacing.md },
   backButton: { width: spacing.lg + spacing.xs, height: spacing.lg + spacing.xs, alignItems: "center", justifyContent: "center", borderRadius: radius.round, backgroundColor: darkColors.primary },
   title: { ...typography.storeTitle, color: darkColors.white },
