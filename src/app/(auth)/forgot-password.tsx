@@ -154,7 +154,7 @@ function ClerkRecoveryFlow() {
           <SuccessArtwork />
           <Text style={styles.successTitle}>Password Update{"\n"}Successfully</Text>
           <Text style={styles.successDescription}>Your password has been changed. Continue to your Go-Shopper account.</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.replace("/(customer)/(tabs)")} style={styles.successButton}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace("/")} style={styles.successButton}>
             <Text style={styles.successButtonText}>Continue</Text>
           </Pressable>
         </View>

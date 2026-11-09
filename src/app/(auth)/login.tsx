@@ -83,7 +83,7 @@ function ClerkLoginScreen() {
           return;
         }
         if (signIn.status === "complete") {
-          await signIn.finalize({ navigate: () => router.replace("/(customer)/(tabs)") });
+          await signIn.finalize({ navigate: () => router.replace("/") });
           return;
         }
       }
@@ -109,7 +109,7 @@ function ClerkLoginScreen() {
 
       if (signIn.status === "complete") {
         await signIn.finalize({
-          navigate: () => router.replace("/(customer)/(tabs)"),
+          navigate: () => router.replace("/"),
         });
       } else if (signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust") {
         const available = [...new Set(
@@ -158,7 +158,7 @@ function ClerkLoginScreen() {
         return;
       }
       if (signIn.status === "complete") {
-        await signIn.finalize({ navigate: () => router.replace("/(customer)/(tabs)") });
+        await signIn.finalize({ navigate: () => router.replace("/") });
       } else {
         setRequestError("That code didn’t complete verification. Check it and try again.");
       }

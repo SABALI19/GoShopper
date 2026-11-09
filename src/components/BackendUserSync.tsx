@@ -7,11 +7,11 @@ export function BackendUserSync() {
   const { isLoaded: authLoaded, isSignedIn, getToken } = useAuth();
   const { isLoaded: userLoaded, user } = useUser();
   const router = useRouter();
-  const adminRouteHandledFor = useRef<string | null>(null);
+  const routedRoleFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!authLoaded || !isSignedIn) {
-      adminRouteHandledFor.current = null;
+      routedRoleFor.current = null;
       return;
     }
     if (!apiBaseUrl || !userLoaded || !user) return;
@@ -30,9 +30,17 @@ export function BackendUserSync() {
             lastName: user.lastName || "",
           },
         });
-        if (result.user.role === "admin" && adminRouteHandledFor.current !== user.id) {
-          adminRouteHandledFor.current = user.id;
-          router.replace("/(admin)" as never);
+        const destinations: Record<string, string> = {
+          customer: "/(customer)/(tabs)",
+          supermarket: "/(supermarket)/(tabs)",
+          admin: "/(admin)",
+          rider: "/(rider)/(tabs)",
+        };
+        const role = result.user.role;
+        const routeKey = role ? `${user.id}:${role}` : null;
+        if (role && destinations[role] && routeKey !== routedRoleFor.current) {
+          routedRoleFor.current = routeKey;
+          router.replace(destinations[role] as never);
         }
       } catch (error) {
         if (__DEV__) console.warn("Could not sync the signed-in user with Go-Shopper API", error);

@@ -89,7 +89,7 @@ function ClerkSignUpScreen() {
 
       if (signUp.status === "complete") {
         await signUp.finalize({
-          navigate: () => router.replace("/(customer)/(tabs)"),
+          navigate: () => router.replace("/"),
         });
       }
     } catch {
