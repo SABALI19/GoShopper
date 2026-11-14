@@ -1,36 +1,24 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
-import { useAuth, useUser } from "@clerk/expo";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import { GoShopperBag } from "../components/GoShopperBag";
 import { lightColors, radius, spacing, typography } from "../theme";
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
 export default function SplashScreen() {
-  if (!publishableKey) {
-    return <SplashContent destination="/(auth)/login" ready />;
-  }
-
-  return <ClerkSplash />;
-}
-
-function ClerkSplash() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { isLoaded: userLoaded, user } = useUser();
-  const role = user?.publicMetadata.role;
-  const destination = !isSignedIn
+  const { isLoaded, isSignedIn, user } = useAuth();
+  const role = user?.role;
+  const destination = !isLoaded || !isSignedIn
     ? "/(auth)/login"
-    : role === "supermarket"
+    : role === "supermarket" && user?.approvalStatus === "approved"
       ? "/(supermarket)/(tabs)"
       : role === "admin"
         ? "/(admin)"
-        : role === "rider"
+        : role === "rider" && user?.approvalStatus === "approved"
           ? "/(rider)/(tabs)"
-        : "/(customer)/(tabs)";
-
-  return <SplashContent destination={destination} ready={isLoaded && (!isSignedIn || userLoaded)} />;
+          : role === "supermarket" || role === "rider" ? "/(auth)/login" : "/(customer)/(tabs)";
+  return <SplashContent destination={destination} ready={isLoaded} />;
 }
 
 function SplashContent({

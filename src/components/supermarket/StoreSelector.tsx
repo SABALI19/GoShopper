@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/expo";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../ui/Icon";
@@ -6,8 +6,8 @@ import { useSupermarketStore } from "../../features/supermarket/store";
 import { darkColors, radius, spacing, typography } from "../../theme";
 
 export function StoreSelector() {
-  const { user } = useUser();
-  const isAdmin = user?.publicMetadata.role === "admin";
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [visible, setVisible] = useState(false);
   const stores = useSupermarketStore((state) => state.stores);
   const selectedStoreId = useSupermarketStore((state) => state.selectedStoreId);

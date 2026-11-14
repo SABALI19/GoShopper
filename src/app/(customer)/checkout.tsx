@@ -1,4 +1,4 @@
-import { useAuth, useUser } from "@clerk/expo";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,14 +37,13 @@ const paymentMethods: { label: string; icon: IconName }[] = [
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const { user } = useUser();
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { user, getToken, isLoaded, isSignedIn } = useAuth();
   const lines = useCartStore((state) => state.lines);
   const hasHydrated = useCartStore((state) => state.hasHydrated);
   const clearCart = useCartStore((state) => state.clearCart);
-  const [fullName, setFullName] = useState(user?.fullName ?? "");
+  const [fullName, setFullName] = useState(user ? `${user.firstName} ${user.lastName}`.trim() : "");
   const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState(user?.primaryPhoneNumber?.phoneNumber ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
   const [quote, setQuote] = useState<CheckoutQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);

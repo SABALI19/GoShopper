@@ -36,7 +36,6 @@
           "resizeMode": "contain"
         }
       ],
-      "@clerk/expo",
       "expo-secure-store",
       "expo-web-browser"
     ],

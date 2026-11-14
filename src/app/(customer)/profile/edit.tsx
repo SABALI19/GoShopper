@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useUser } from "@clerk/expo";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -12,7 +12,7 @@ import { darkColors, radius, spacing, typography } from "../../../theme";
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, updateUser } = useAuth();
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [busy, setBusy] = useState(false);
@@ -20,7 +20,7 @@ export default function EditProfileScreen() {
     if (!user) return;
     setBusy(true);
     try {
-      await user.update({ firstName: firstName.trim(), lastName: lastName.trim() });
+      await updateUser({ firstName: firstName.trim(), lastName: lastName.trim() });
       router.back();
     } catch {
       Alert.alert("Couldn’t update profile", "Please try again in a moment.");
@@ -43,7 +43,7 @@ export default function EditProfileScreen() {
         <TextField autoCapitalize="words" label="Last Name" onChangeText={setLastName} placeholder="Enter your last name" value={lastName} />
         <View style={styles.readOnlyField}>
           <Text style={styles.readOnlyLabel}>Email</Text>
-          <Text style={styles.readOnlyValue}>{user?.primaryEmailAddress?.emailAddress ?? "No email address"}</Text>
+          <Text style={styles.readOnlyValue}>{user?.email ?? "No email address"}</Text>
         </View>
         <Button loading={busy} onPress={saveProfile} title="Save Changes" />
       </RefreshableScrollView>

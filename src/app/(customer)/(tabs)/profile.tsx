@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useClerk, useUser } from "@clerk/expo";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,21 +33,12 @@ const menuGroups: MenuItem[][] = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  if (publishableKey) return <SignedInProfile />;
-  return (
-    <ProfileContent
-      name="Michael Jake"
-      email="Michael Jake@gmail.com"
-      onLogout={() => router.replace("/(auth)/login")}
-    />
-  );
+  return <SignedInProfile />;
 }
 
 function SignedInProfile() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const { user, isLoaded, signOut } = useAuth();
   if (!isLoaded) return null;
 
   const handleLogout = async () => {
@@ -57,9 +48,8 @@ function SignedInProfile() {
 
   return (
     <ProfileContent
-      name={user?.fullName || user?.firstName || "Go-Shopper Customer"}
-      email={user?.primaryEmailAddress?.emailAddress ?? user?.primaryPhoneNumber?.phoneNumber ?? ""}
-      imageUrl={user?.imageUrl}
+      name={user ? `${user.firstName} ${user.lastName}`.trim() || "Go-Shopper Customer" : "Go-Shopper Customer"}
+      email={user?.email ?? user?.phone ?? ""}
       onLogout={handleLogout}
     />
   );
