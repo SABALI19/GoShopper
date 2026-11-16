@@ -18,6 +18,8 @@ export default function SupermarketTabsLayout() {
   }}>
     <Tabs.Screen name="index" options={{ title: "Dashboard", tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="home" /> }} />
     <Tabs.Screen name="orders" options={{ title: "Orders", tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="orders" /> }} />
+    <Tabs.Screen name="products" options={{ title: "Products", tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="store" /> }} />
+    <Tabs.Screen name="more" options={{ title: "More", tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="grid" /> }} />
   </Tabs>;
 }
 

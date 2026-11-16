@@ -1,6 +1,6 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { Button } from "../../components/ui/Button";

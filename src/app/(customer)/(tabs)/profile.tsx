@@ -32,7 +32,6 @@ const menuGroups: MenuItem[][] = [
 ];
 
 export default function ProfileScreen() {
-  const router = useRouter();
   return <SignedInProfile />;
 }
 

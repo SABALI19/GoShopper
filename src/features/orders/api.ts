@@ -19,19 +19,25 @@ export type CheckoutQuoteStore = {
   storeName: string;
   items: CheckoutQuoteItem[];
   merchandiseSubtotalKobo: number;
-  minimumOrderKobo: number;
-  eligible: boolean;
-  amountRemainingKobo: number;
 };
 
 export type CheckoutQuote = {
   stores: CheckoutQuoteStore[];
+  multiStoreMinimumKobo: number;
   merchandiseSubtotalKobo: number;
+  storeCount: number;
+  isMultiStore: boolean;
+  isEligible: boolean;
+  amountRemainingKobo: number;
   deliveryFeeKobo: number;
   serviceFeeKobo: number;
   totalKobo: number;
   eligible: boolean;
 };
+
+export async function fetchMultiStoreCheckoutConfig() {
+  return apiRequest<{ multiStoreCheckoutMinimumKobo: number }>("/api/config/checkout");
+}
 
 export type OrderItem = CheckoutQuoteItem & {
   fulfilmentStatus?: "pending" | "preparing" | "unavailable" | "fulfilled";
@@ -103,7 +109,7 @@ export type CustomerOrder = {
   deliveryFeeKobo: number;
   serviceFeeKobo: number;
   totalKobo: number;
-  minimumStoreSubtotalKobo?: number;
+  multiStoreCheckoutMinimumKobo?: number;
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
   status: string;
   cancellationReason?: string;

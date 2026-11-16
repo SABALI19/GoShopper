@@ -18,6 +18,7 @@ import { darkColors, radius, spacing, typography } from "../../../theme";
 import { stores } from "../../../features/stores/data";
 import { fetchStores } from "../../../features/stores/api";
 import type { StoreInfo } from "../../../features/stores/data";
+import { apiBaseUrl } from "../../../features/api/client";
 
 const popularStores = [
   { storeId: "fashion-hub", name: "Fashion Hub", image: require("../../../../assets/images/explore/store-fashion.png") },
@@ -49,8 +50,9 @@ export default function ExploreScreen() {
   useEffect(() => {
     let active = true;
     fetchStores().then((result) => {
-      if (active && result?.length) setRemoteStores(result);
+      if (active && result) setRemoteStores(result);
     }).catch((error) => {
+      if (active && apiBaseUrl) setRemoteStores([]);
       if (__DEV__) console.warn("Could not load stores from Go-Shopper API", error);
     });
     return () => { active = false; };
@@ -58,12 +60,12 @@ export default function ExploreScreen() {
 
   const visibleStores = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const source = remoteStores?.map((store) => ({
+    const source = apiBaseUrl ? (remoteStores ?? []).map((store) => ({
       storeId: store.id,
       name: store.name,
       image: store.logo,
       category: store.category,
-    })) ?? popularStores.map((store) => ({
+    })) : popularStores.map((store) => ({
       ...store,
       category: stores.find((item) => item.id === store.storeId)?.category || "",
     }));
@@ -137,7 +139,7 @@ export default function ExploreScreen() {
                 <Text numberOfLines={1} style={styles.cardLabel}>{store.name}</Text>
               </Pressable>
             ))}
-            {visibleStores.length === 0 ? <Text style={styles.noResults}>No stores match your search.</Text> : null}
+            {visibleStores.length === 0 ? <Text style={styles.noResults}>{apiBaseUrl && !remoteStores ? "Loading available stores…" : apiBaseUrl ? "No open stores with available products were found." : "No stores match your search."}</Text> : null}
           </ScrollView>
         </View>
 

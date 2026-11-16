@@ -8,10 +8,10 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) { retu
 export default function AdminTabsLayout() {
   return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: darkColors.primary, tabBarInactiveTintColor: darkColors.tabInactive, tabBarStyle: styles.bar, tabBarLabelStyle: styles.label, sceneStyle: styles.scene }}>
     <Tabs.Screen name="index" options={{ title: "Overview", tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} /> }} />
+    <Tabs.Screen name="applications" options={{ title: "Applications", tabBarIcon: ({ focused }) => <TabIcon name="orders" focused={focused} /> }} />
     <Tabs.Screen name="stores" options={{ title: "Stores", tabBarIcon: ({ focused }) => <TabIcon name="store" focused={focused} /> }} />
-    <Tabs.Screen name="customers" options={{ title: "Customers", tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }} />
     <Tabs.Screen name="orders" options={{ title: "Orders", tabBarIcon: ({ focused }) => <TabIcon name="orders" focused={focused} /> }} />
-    <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon name="grid" focused={focused} /> }} />
+    <Tabs.Screen name="more" options={{ title: "More", tabBarIcon: ({ focused }) => <TabIcon name="grid" focused={focused} /> }} />
   </Tabs>;
 }
 

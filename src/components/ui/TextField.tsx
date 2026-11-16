@@ -1,4 +1,5 @@
 import {
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -6,6 +7,7 @@ import {
   type KeyboardTypeOptions,
   type TextInputProps,
 } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import { darkColors, radius, spacing, typography } from "../../theme";
 
 type TextFieldProps = {
@@ -14,6 +16,9 @@ type TextFieldProps = {
   placeholder: string;
   onChangeText: (value: string) => void;
   secureTextEntry?: boolean;
+  showPasswordToggle?: boolean;
+  passwordVisible?: boolean;
+  onTogglePasswordVisibility?: () => void;
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: TextInputProps["autoCapitalize"];
   returnKeyType?: TextInputProps["returnKeyType"];
@@ -26,6 +31,9 @@ export function TextField({
   placeholder,
   onChangeText,
   secureTextEntry,
+  showPasswordToggle = false,
+  passwordVisible = false,
+  onTogglePasswordVisibility,
   keyboardType,
   autoCapitalize = "none",
   returnKeyType,
@@ -34,6 +42,7 @@ export function TextField({
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
+      <View style={styles.inputContainer}>
       <TextInput
         accessibilityLabel={label}
         autoCapitalize={autoCapitalize}
@@ -44,11 +53,18 @@ export function TextField({
         placeholder={placeholder}
         placeholderTextColor={darkColors.placeholder}
         returnKeyType={returnKeyType}
-        secureTextEntry={secureTextEntry}
+        secureTextEntry={showPasswordToggle ? !passwordVisible : secureTextEntry}
         selectionColor={darkColors.primary}
-        style={styles.input}
+        style={[styles.input, showPasswordToggle && styles.passwordInput]}
         value={value}
       />
+      {showPasswordToggle ? <Pressable accessibilityRole="button" accessibilityLabel={passwordVisible ? "Hide password" : "Show password"} accessibilityState={{ checked: passwordVisible }} hitSlop={10} onPress={onTogglePasswordVisibility} style={styles.visibilityButton}>
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={darkColors.placeholder} strokeWidth={1.8}>
+          <Path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" />
+          {passwordVisible ? <><Circle cx={12} cy={12} r={3} /><Path strokeLinecap="round" d="m4 4 16 16" /></> : <><Circle cx={12} cy={12} r={3} /></>}
+        </Svg>
+      </Pressable> : null}
+      </View>
     </View>
   );
 }
@@ -71,4 +87,7 @@ const styles = StyleSheet.create({
     backgroundColor: darkColors.inputSurface,
     color: darkColors.white,
   },
+  inputContainer: { position: "relative", justifyContent: "center" },
+  passwordInput: { paddingRight: spacing.xl },
+  visibilityButton: { position: "absolute", right: spacing.md, height: spacing.loginFieldHeight, alignItems: "center", justifyContent: "center" },
 });

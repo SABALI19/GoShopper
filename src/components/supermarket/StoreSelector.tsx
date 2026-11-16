@@ -1,4 +1,3 @@
-import { useAuth } from "@/features/auth/AuthProvider";
 import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../ui/Icon";
@@ -6,8 +5,6 @@ import { useSupermarketStore } from "../../features/supermarket/store";
 import { darkColors, radius, spacing, typography } from "../../theme";
 
 export function StoreSelector() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
   const [visible, setVisible] = useState(false);
   const stores = useSupermarketStore((state) => state.stores);
   const selectedStoreId = useSupermarketStore((state) => state.selectedStoreId);
@@ -18,7 +15,7 @@ export function StoreSelector() {
     <Pressable accessibilityRole="button" accessibilityLabel="Select a store to manage" onPress={() => stores.length > 1 && setVisible(true)} style={[styles.selector, stores.length < 2 && styles.selectorStatic]}>
       {selected?.logoUrl ? <Image source={{ uri: selected.logoUrl }} style={styles.logo} /> : <View style={styles.logoFallback}><Icon color={darkColors.primary} name="store" size={spacing.md} /></View>}
       <View style={styles.copy}>
-        <Text style={styles.eyebrow}>{isAdmin ? "Admin store access" : "Managing store"}</Text>
+        <Text style={styles.eyebrow}>Managing store</Text>
         <Text numberOfLines={1} style={styles.name}>{selected?.name ?? (stores.length ? "Choose a store" : "No stores found")}</Text>
       </View>
       {stores.length > 1 ? <Icon color={darkColors.white} name="chevron" size={spacing.md} /> : null}
@@ -32,7 +29,7 @@ export function StoreSelector() {
             {stores.map((store) => {
               const isSelected = store.id === selectedStoreId;
               return <Pressable key={store.id} accessibilityRole="button" accessibilityState={{ selected: isSelected }} onPress={() => { selectStore(store.id); setVisible(false); }} style={[styles.storeRow, isSelected && styles.selectedRow]}>
-                <View style={styles.storeText}><Text style={styles.storeName}>{store.name}</Text><Text style={styles.status}>{store.isApproved ? (store.isActive ? "Approved · Active" : "Approved · Inactive") : "Awaiting approval"}</Text></View>
+                <View style={styles.storeText}><Text style={styles.storeName}>{store.name}</Text><Text style={styles.status}>{!store.isApproved ? "Awaiting approval" : store.isSuspended ? "Suspended" : store.isOpen ? "Open for orders" : "Closed to orders"}</Text></View>
                 {isSelected ? <Icon color={darkColors.primary} name="orders" size={spacing.md} /> : null}
               </Pressable>;
             })}

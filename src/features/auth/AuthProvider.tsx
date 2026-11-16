@@ -1,8 +1,9 @@
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiBaseUrl } from "../api/client";
+import { queryClient } from "../api/queryClient";
 
-export type AppUser = { id: string; firstName: string; lastName: string; email: string; phone: string; emailVerified: boolean; phoneVerified: boolean; role: "customer" | "supermarket" | "rider" | "admin"; approvalStatus: string; isSuspended: boolean };
+export type AppUser = { id: string; firstName: string; lastName: string; email: string; phone: string; emailVerified: boolean; phoneVerified: boolean; role: "customer" | "supermarket" | "rider" | "admin"; approvalStatus: string; isSuspended: boolean; lastLoginAt?: string | null };
 type AuthContextValue = { isLoaded: boolean; isSignedIn: boolean; user: AppUser | null; getToken: () => Promise<string | null>; signIn: (identifier: string, password: string) => Promise<void>; register: (data: Record<string, string>) => Promise<{ user: AppUser; verification: { emailSent: boolean; phoneCodeSent: boolean } }>; verifyEmail: (token: string) => Promise<void>; verifyPhone: (email: string, code: string) => Promise<void>; resendVerification: (email: string) => Promise<void>; forgotPassword: (email: string) => Promise<void>; resetPassword: (token: string, password: string) => Promise<void>; signOut: () => Promise<void>; signOutAll: () => Promise<void>; updateUser: (data: { firstName: string; lastName: string }) => Promise<void>; refreshUser: () => Promise<AppUser | null> };
 const Context = createContext<AuthContextValue | null>(null);
 const ACCESS_KEY = "gs_access_v1";
@@ -42,8 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resendVerification = useCallback(async (email: string) => { await request("/resend-verification", "POST", { email }); }, []);
   const forgotPassword = useCallback(async (email: string) => { await request("/password/forgot", "POST", { email }); }, []);
   const resetPassword = useCallback(async (token: string, password: string) => { await request("/password/reset", "POST", { token, password }); }, []);
-  const signOut = useCallback(async () => { try { const token = await getToken(); if (token) await request("/logout", "POST", {}, token); } finally { accessToken = null; setUser(null); await SecureStore.deleteItemAsync(ACCESS_KEY); await SecureStore.deleteItemAsync(REFRESH_KEY); } }, [getToken]);
-  const signOutAll = useCallback(async () => { try { const token = await getToken(); if (token) await request("/logout-all", "POST", {}, token); } finally { accessToken = null; setUser(null); await SecureStore.deleteItemAsync(ACCESS_KEY); await SecureStore.deleteItemAsync(REFRESH_KEY); } }, [getToken]);
+  const signOut = useCallback(async () => { try { const token = await getToken(); if (token) await request("/logout", "POST", {}, token); } finally { accessToken = null; setUser(null); await SecureStore.deleteItemAsync(ACCESS_KEY); await SecureStore.deleteItemAsync(REFRESH_KEY); queryClient.clear(); } }, [getToken]);
+  const signOutAll = useCallback(async () => { try { const token = await getToken(); if (token) await request("/logout-all", "POST", {}, token); } finally { accessToken = null; setUser(null); await SecureStore.deleteItemAsync(ACCESS_KEY); await SecureStore.deleteItemAsync(REFRESH_KEY); queryClient.clear(); } }, [getToken]);
   const updateUser = useCallback(async (data: { firstName: string; lastName: string }) => { const token = await getToken(); if (!token) throw new Error("Sign in again."); const result = await request<{ user: AppUser }>("/me", "PATCH", data, token); setUser(result.user); }, [getToken]);
   const value = useMemo(() => ({ isLoaded, isSignedIn: Boolean(user), user, getToken, signIn, register, verifyEmail, verifyPhone, resendVerification, forgotPassword, resetPassword, signOut, signOutAll, updateUser, refreshUser }), [forgotPassword, getToken, isLoaded, refreshUser, register, resendVerification, resetPassword, signIn, signOut, signOutAll, updateUser, user, verifyEmail, verifyPhone]);
   return <Context.Provider value={value}>{children}</Context.Provider>;

@@ -7,5 +7,7 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) { retu
 export default function RiderTabs() { return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: darkColors.primary, tabBarInactiveTintColor: darkColors.tabInactive, tabBarStyle: styles.bar, tabBarLabelStyle: styles.label, sceneStyle: styles.scene }}>
   <Tabs.Screen name="index" options={{ title: "Dashboard", tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} /> }} />
   <Tabs.Screen name="deliveries" options={{ title: "Deliveries", tabBarIcon: ({ focused }) => <TabIcon name="orders" focused={focused} /> }} />
+  <Tabs.Screen name="earnings" options={{ title: "Earnings", tabBarIcon: ({ focused }) => <TabIcon name="cash" focused={focused} /> }} />
+  <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }} />
 </Tabs>; }
 const styles = StyleSheet.create({ scene: { backgroundColor: darkColors.background }, bar: { height: spacing.tabBarHeight, paddingTop: spacing.sm, backgroundColor: darkColors.tabBar, borderTopWidth: 0, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }, label: { ...typography.tabLabel } });

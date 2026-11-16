@@ -9,6 +9,8 @@ import {
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/features/api/queryClient";
 import { darkColors } from "../theme";
 
 const navigationTheme = {
@@ -48,7 +50,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <AuthProvider>{routes}</AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{routes}</AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

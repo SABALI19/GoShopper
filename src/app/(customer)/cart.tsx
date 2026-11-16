@@ -1,28 +1,48 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "../../components/ui/Icon";
 import { RefreshableScrollView } from "../../components/ui/RefreshableScrollView";
-import { useCartStore, type CartLine } from "../../features/cart/store";
-import { getCartEligibility, type StoreCartSummary } from "../../features/cart/eligibility";
-import { minimumStoreSubtotalKobo } from "../../features/cart/config";
+import { useAuth } from "../../features/auth/AuthProvider";
+import { useCartStore } from "../../features/cart/store";
+import { getStoreCartSummaries } from "../../features/cart/eligibility";
 import { estimatedDeliveryFeeKobo } from "../../features/cart/pricing";
-import { fetchStoreProducts } from "../../features/stores/api";
-import { getStoreById, type StoreProduct } from "../../features/stores/data";
+import { getStoreById } from "../../features/stores/data";
+import { requestCheckoutQuote, type CheckoutItemInput } from "../../features/orders/api";
 import { darkColors, radius, spacing, typography } from "../../theme";
 
 export default function CartScreen() {
   const router = useRouter();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const lines = useCartStore((state) => state.lines);
   const hasHydrated = useCartStore((state) => state.hasHydrated);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const removeStore = useCartStore((state) => state.removeStore);
-  const eligibility = getCartEligibility(lines);
+  const stores = getStoreCartSummaries(lines);
   const subtotalKobo = lines.reduce((sum, line) => sum + line.unitPriceKobo * line.quantity, 0);
   const deliveryFeeKobo = lines.length ? estimatedDeliveryFeeKobo : 0;
+  const requestItems = useMemo<CheckoutItemInput[]>(() => lines.map(({ storeId, productId, quantity }) => ({ storeId, productId, quantity })), [lines]);
+  const quoteQuery = useQuery({
+    queryKey: ["checkout-quote", requestItems],
+    enabled: lines.length > 0 && isLoaded && isSignedIn,
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Sign in to verify your cart before checkout.");
+      return requestCheckoutQuote(token, requestItems);
+    },
+    retry: 1,
+  });
+  const quote = quoteQuery.data;
+  const quoteLoading = lines.length > 0 && (!isLoaded || quoteQuery.isFetching);
+  const quoteError = quoteQuery.error instanceof Error
+    ? quoteQuery.error.message
+    : lines.length > 0 && isLoaded && !isSignedIn
+      ? "Sign in to verify your cart before checkout."
+      : "";
 
   if (!hasHydrated) {
     return (
@@ -49,7 +69,7 @@ export default function CartScreen() {
       {lines.length ? (
         <>
           <RefreshableScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-            {eligibility.stores.map((storeSummary) => {
+            {stores.map((storeSummary) => {
               const store = getStoreById(storeSummary.storeId);
               const storeName = storeSummary.lines[0]?.storeName ?? store?.name ?? "Store";
               return (
@@ -90,22 +110,6 @@ export default function CartScreen() {
                       <Text style={styles.storeSubtotalLabel}>Store subtotal</Text>
                       <Text style={styles.storeSubtotal}>{formatNaira(storeSummary.subtotalKobo)}</Text>
                     </View>
-                    <StoreEligibility summary={storeSummary} />
-                    {!storeSummary.eligible ? (
-                      <StoreSuggestions
-                        currentLines={storeSummary.lines}
-                        storeId={storeSummary.storeId}
-                        onAdd={(product) => useCartStore.getState().addItem({
-                          productId: product.id,
-                          storeId: storeSummary.storeId,
-                          storeName,
-                          name: product.name,
-                          description: product.description,
-                          unitPriceKobo: product.priceKobo,
-                          image: product.image,
-                        })}
-                      />
-                    ) : null}
                   </View>
                 </View>
               );
@@ -113,21 +117,22 @@ export default function CartScreen() {
           </RefreshableScrollView>
 
           <View style={styles.summary}>
-            <SummaryRow label="Subtotal" value={formatNaira(subtotalKobo)} />
+            <SummaryRow label="Subtotal" value={formatNaira(quote?.merchandiseSubtotalKobo ?? subtotalKobo)} />
             <SummaryRow label="Estimated delivery" value={formatNaira(deliveryFeeKobo)} />
-            {!eligibility.eligible ? (
-              <Text accessibilityRole="alert" style={styles.minimumMessage}>
-                Each supermarket must reach {formatNaira(minimumStoreSubtotalKobo)} before checkout. Still needed: {eligibility.belowMinimum.map((storeSummary) => {
-                  const name = storeSummary.lines[0]?.storeName ?? getStoreById(storeSummary.storeId)?.name ?? "Store";
-                  return `${name} ${formatNaira(storeSummary.amountRemainingKobo)}`;
-                }).join(", ")}.
-              </Text>
-            ) : null}
+            {quote?.isMultiStore ? <View style={styles.eligibility}>
+              <View style={styles.minimumLabels}><Text style={styles.minimumLabel}>Multi-store minimum: {formatNaira(quote.multiStoreMinimumKobo)}</Text></View>
+              <View accessibilityLabel={`Multi-store checkout progress: ${Math.round(Math.min(1, quote.merchandiseSubtotalKobo / quote.multiStoreMinimumKobo) * 100)} percent`} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(Math.min(1, quote.merchandiseSubtotalKobo / quote.multiStoreMinimumKobo) * 100) }} style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${Math.min(1, quote.merchandiseSubtotalKobo / quote.multiStoreMinimumKobo) * 100}%` }, quote.isEligible && styles.progressComplete]} />
+              </View>
+              {!quote.isEligible ? <Text accessibilityRole="alert" style={styles.minimumMessage}>Add {formatNaira(quote.amountRemainingKobo)} more to order from multiple stores.</Text> : null}
+            </View> : null}
+            {quoteLoading ? <Text style={styles.minimumLabel}>Checking live prices…</Text> : null}
+            {quoteError ? <Text accessibilityRole="alert" style={styles.minimumMessage}>{quoteError}</Text> : null}
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>{formatNaira(subtotalKobo + deliveryFeeKobo)}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityState={{ disabled: !eligibility.eligible }} disabled={!eligibility.eligible} onPress={() => router.push("/(customer)/checkout")} style={({ pressed }) => [styles.checkoutButton, pressed && styles.pressed, !eligibility.eligible && styles.checkoutDisabled]}>
+            <Pressable accessibilityRole="button" accessibilityState={{ disabled: !quote?.isEligible }} disabled={!quote?.isEligible || quoteLoading} onPress={() => router.push("/(customer)/checkout")} style={({ pressed }) => [styles.checkoutButton, pressed && styles.pressed, (!quote?.isEligible || quoteLoading) && styles.checkoutDisabled]}>
               <Text style={styles.checkoutLabel}>Proceed to Checkout</Text>
             </Pressable>
           </View>
@@ -145,79 +150,6 @@ export default function CartScreen() {
         </RefreshableScrollView>
       )}
     </SafeAreaView>
-  );
-}
-
-function StoreEligibility({ summary }: { summary: StoreCartSummary }) {
-  const progress = Math.min(1, summary.subtotalKobo / minimumStoreSubtotalKobo);
-  return (
-    <View style={styles.eligibility}>
-      <View style={styles.minimumLabels}>
-        <Text style={styles.minimumLabel}>Minimum order: {formatNaira(minimumStoreSubtotalKobo)}</Text>
-        {summary.eligible ? (
-          <Text style={styles.eligibleLabel}>Minimum reached</Text>
-        ) : (
-          <Text style={styles.pendingLabel}>Add {formatNaira(summary.amountRemainingKobo)} to qualify</Text>
-        )}
-      </View>
-      <View accessibilityLabel={`Minimum order progress: ${Math.round(progress * 100)} percent`} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }} style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }, summary.eligible && styles.progressComplete]} />
-      </View>
-    </View>
-  );
-}
-
-function StoreSuggestions({ currentLines, storeId, onAdd }: {
-  currentLines: CartLine[];
-  storeId: string;
-  onAdd: (product: StoreProduct) => void;
-}) {
-  const [products, setProducts] = useState<StoreProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void fetchStoreProducts(storeId)
-      .then((remoteProducts) => {
-        if (!active) return;
-        setProducts(remoteProducts ?? getStoreById(storeId)?.products ?? []);
-      })
-      .catch(() => {
-        if (active) setProducts(getStoreById(storeId)?.products ?? []);
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-          setLoaded(true);
-        }
-      });
-    return () => { active = false; };
-  }, [storeId]);
-
-  const inCart = new Set(currentLines.map((line) => line.productId));
-  const suggestions = products.filter((product) => !inCart.has(product.id)).slice(0, 3);
-
-  return (
-    <View style={styles.suggestions}>
-      <Text style={styles.suggestionsTitle}>Add more from this store</Text>
-      {loading ? <ActivityIndicator color={darkColors.primary} size="small" /> : null}
-      {!loading && loaded && suggestions.length ? suggestions.map((product) => (
-        <View key={product.id} style={styles.suggestionRow}>
-          <Image resizeMode="cover" source={product.image} style={styles.suggestionImage} />
-          <View style={styles.suggestionInfo}>
-            <Text numberOfLines={1} style={styles.suggestionName}>{product.name}</Text>
-            <Text style={styles.suggestionPrice}>{formatNaira(product.priceKobo)}</Text>
-          </View>
-          <Pressable accessibilityLabel={`Add ${product.name} from this store`} accessibilityRole="button" onPress={() => onAdd(product)} style={({ pressed }) => [styles.suggestionAdd, pressed && styles.pressed]}>
-            <Text style={styles.suggestionAddText}>Add</Text>
-          </Pressable>
-        </View>
-      )) : null}
-      {!loading && loaded && suggestions.length === 0 ? (
-        <Text style={styles.noSuggestions}>No more products are available from this store right now.</Text>
-      ) : null}
-    </View>
   );
 }
 

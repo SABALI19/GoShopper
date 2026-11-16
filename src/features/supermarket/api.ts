@@ -7,7 +7,8 @@ export type ManagedStore = {
   category: string;
   tagline?: string;
   logoUrl?: string;
-  isActive: boolean;
+  isOpen: boolean;
+  isSuspended: boolean;
   isApproved: boolean;
   openHours?: string;
 };

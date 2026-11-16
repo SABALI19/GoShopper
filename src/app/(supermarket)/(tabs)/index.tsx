@@ -92,8 +92,8 @@ export default function SupermarketDashboardScreen() {
       {storesLoading ? <View style={styles.state}><ActivityIndicator color={darkColors.primary} /><Text style={styles.stateText}>Loading your stores…</Text></View> : null}
       {!storesLoading && !error && stores.length === 0 ? <EmptyState icon="store" title="No stores found" description="This supermarket account does not have a store assigned yet." /> : null}
       {selectedStore ? <View style={styles.storeStatus}>
-        <View style={styles.statusCopy}><Text style={styles.statusName}>{selectedStore.name}</Text><Text style={styles.statusHint}>{selectedStore.isApproved ? (selectedStore.isActive ? "Approved and active" : "Approved, currently inactive") : "Awaiting admin approval"}</Text></View>
-        <View style={[styles.statusBadge, selectedStore.isApproved && selectedStore.isActive ? styles.activeBadge : styles.inactiveBadge]}><Text style={styles.statusBadgeText}>{selectedStore.isApproved && selectedStore.isActive ? "Active" : "Inactive"}</Text></View>
+        <View style={styles.statusCopy}><Text style={styles.statusName}>{selectedStore.name}</Text><Text style={styles.statusHint}>{!selectedStore.isApproved ? "Awaiting admin approval" : selectedStore.isSuspended ? "Suspended by Go-Shopper" : selectedStore.isOpen ? "Open for orders" : "Closed to orders"}</Text></View>
+        <View style={[styles.statusBadge, selectedStore.isApproved && !selectedStore.isSuspended ? styles.activeBadge : styles.inactiveBadge]}><Text style={styles.statusBadgeText}>{selectedStore.isSuspended ? "Suspended" : selectedStore.isOpen ? "Open" : "Closed"}</Text></View>
       </View> : null}
 
       {error ? <View accessibilityRole="alert" style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Button title="Retry" onPress={() => void (stores.length ? loadSummary() : loadStores())} /></View> : null}

@@ -27,9 +27,9 @@ export default function AdminStoresScreen() {
     {stores.map((store) => <AdminCard key={store.id} onPress={() => router.push({ pathname: "/(admin)/store/[storeId]", params: { storeId: store.id } } as never)}>
       <View style={styles.top}><View style={styles.flex}><AdminValue>{store.name}</AdminValue><AdminLabel>{store.category} · {store.id}</AdminLabel></View><Text style={styles.status}>{humanize(store.approvalStatus)}</Text></View>
       <View style={styles.owner}><AdminLabel>Owner</AdminLabel><Text style={styles.copy}>{store.owner?.name || "Unknown owner"} · {store.owner?.email || "No email"}</Text>{store.owner?.phone ? <Text style={styles.copy}>{store.owner.phone}</Text> : null}</View>
-      <Text style={store.isActive ? styles.active : styles.suspended}>{store.isActive ? "Active" : "Suspended"}</Text>
+      <Text style={store.isSuspended ? styles.suspended : store.isOpen ? styles.active : styles.closed}>{store.isSuspended ? "Suspended" : store.isOpen ? "Open for orders" : "Closed to orders"}</Text>
     </AdminCard>)}
     {page * 50 < total ? <Button title={loadingMore ? "Loading…" : "Load more supermarkets"} loading={loadingMore} onPress={() => void load(page + 1, true)} /> : null}
   </AdminPage>;
 }
-const styles = StyleSheet.create({ top: { flexDirection: "row", justifyContent: "space-between", gap: spacing.xs }, flex: { flex: 1 }, status: { ...typography.storeCaption, color: darkColors.primary }, owner: { marginTop: spacing.xs, gap: spacing.xxs }, copy: { ...typography.storeCaption, color: darkColors.white }, active: { ...typography.storeCaption, marginTop: spacing.sm, color: darkColors.success }, suspended: { ...typography.storeCaption, marginTop: spacing.sm, color: darkColors.warning } });
+const styles = StyleSheet.create({ top: { flexDirection: "row", justifyContent: "space-between", gap: spacing.xs }, flex: { flex: 1 }, status: { ...typography.storeCaption, color: darkColors.primary }, owner: { marginTop: spacing.xs, gap: spacing.xxs }, copy: { ...typography.storeCaption, color: darkColors.white }, active: { ...typography.storeCaption, marginTop: spacing.sm, color: darkColors.success }, closed: { ...typography.storeCaption, marginTop: spacing.sm, color: darkColors.mutedText }, suspended: { ...typography.storeCaption, marginTop: spacing.sm, color: darkColors.warning } });

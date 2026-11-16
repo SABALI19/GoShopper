@@ -124,9 +124,9 @@ export default function CheckoutScreen() {
         delivery: { fullName: fullName.trim(), address: address.trim(), phone: phone.trim() },
       };
       const latestQuote = await requestCheckoutQuote(token, requestItems);
-      if (!latestQuote.eligible) {
+      if (!latestQuote.isEligible) {
         setQuote(latestQuote);
-        setError("Every supermarket must meet its minimum before this order can be placed. Review the store amounts below and update your cart.");
+        setError(`Orders from multiple stores require at least ${formatNaira(latestQuote.multiStoreMinimumKobo)} in merchandise. Add ${formatNaira(latestQuote.amountRemainingKobo)} more to continue.`);
         return;
       }
       if (!quote || !sameQuotePrices(quote, latestQuote)) {
@@ -194,16 +194,14 @@ export default function CheckoutScreen() {
 
           <Text style={[styles.sectionTitle, styles.summaryHeading]}>Verified Order Summary</Text>
           {!requestItems.length ? <Text style={styles.emptySummary}>Your cart is empty. Add items before checkout.</Text> : null}
-          {quoteLoading && !quote ? <InlineState message="Checking live prices, stock and store minimums…" loading /> : null}
+          {quoteLoading && !quote ? <InlineState message="Checking live prices, stock and checkout eligibility…" loading /> : null}
           {quote ? (
             <View style={styles.summaryCard}>
               {quote.stores.map((store) => (
                 <View key={store.storeId} style={styles.storeQuote}>
                   <View style={styles.storeQuoteHeader}>
                     <Text style={styles.storeQuoteName}>{store.storeName}</Text>
-                    <Text style={[styles.eligibility, store.eligible ? styles.eligible : styles.ineligible]}>{store.eligible ? "Eligible" : `Add ${formatNaira(store.amountRemainingKobo)}`}</Text>
                   </View>
-                  <Text style={styles.minimumCopy}>Minimum {formatNaira(store.minimumOrderKobo)} merchandise subtotal</Text>
                   {store.items.map((item) => {
                     const cartLine = lines.find((line) => line.storeId === store.storeId && line.productId === item.productId);
                     return (
@@ -223,6 +221,7 @@ export default function CheckoutScreen() {
               <View style={styles.summaryTotals}>
                 <View style={styles.summaryDivider} />
                 <SummaryRow label="Merchandise subtotal" value={formatNaira(quote.merchandiseSubtotalKobo)} />
+                {quote.isMultiStore && !quote.isEligible ? <Text style={styles.errorText}>Add {formatNaira(quote.amountRemainingKobo)} more to order from multiple stores.</Text> : null}
                 <SummaryRow label="Delivery Fee" value={formatNaira(quote.deliveryFeeKobo)} />
                 <SummaryRow label="Service Fee" value={formatNaira(quote.serviceFeeKobo)} />
                 <View style={styles.totalRow}>
@@ -232,8 +231,8 @@ export default function CheckoutScreen() {
               </View>
             </View>
           ) : null}
-          {quote && !quote.eligible ? <View style={styles.errorCard}>
-            <Text style={styles.errorText}>Some supermarket orders are below their merchandise minimum. Delivery and service fees do not count toward that minimum.</Text>
+          {quote && !quote.isEligible ? <View style={styles.errorCard}>
+            <Text style={styles.errorText}>Add {formatNaira(quote.amountRemainingKobo)} more to order from multiple stores. Delivery and service fees are excluded.</Text>
             <Pressable accessibilityRole="button" onPress={() => router.replace("/(customer)/cart")} style={styles.secondaryButton}><Text style={styles.secondaryButtonText}>Update Cart</Text></Pressable>
           </View> : null}
           {error ? <View accessibilityRole="alert" style={styles.errorCard}>
@@ -243,7 +242,7 @@ export default function CheckoutScreen() {
           </View> : null}
         </RefreshableScrollView>
         <View style={styles.footer}>
-          <Pressable accessibilityRole="button" disabled={!quote?.eligible || quoteLoading || submitting || !apiBaseUrl} onPress={() => void placeOrder()} style={({ pressed }) => [styles.placeOrderButton, pressed && styles.pressed, (!quote?.eligible || quoteLoading || submitting || !apiBaseUrl) && styles.disabledButton]}>
+          <Pressable accessibilityRole="button" disabled={!quote?.isEligible || quoteLoading || submitting || !apiBaseUrl} onPress={() => void placeOrder()} style={({ pressed }) => [styles.placeOrderButton, pressed && styles.pressed, (!quote?.isEligible || quoteLoading || submitting || !apiBaseUrl) && styles.disabledButton]}>
             {submitting ? <ActivityIndicator color={darkColors.white} /> : <Text style={styles.placeOrderLabel}>{quoteLoading ? "Refreshing Quote…" : "Place Order"}</Text>}
           </Pressable>
         </View>
@@ -269,10 +268,14 @@ function sameQuotePrices(left: CheckoutQuote, right: CheckoutQuote) {
     stores: quote.stores.map((store) => ({
       storeId: store.storeId,
       merchandiseSubtotalKobo: store.merchandiseSubtotalKobo,
-      minimumOrderKobo: store.minimumOrderKobo,
-      eligible: store.eligible,
       items: store.items.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPriceKobo: item.unitPriceKobo, lineTotalKobo: item.lineTotalKobo })),
     })),
+    multiStoreMinimumKobo: quote.multiStoreMinimumKobo,
+    merchandiseSubtotalKobo: quote.merchandiseSubtotalKobo,
+    storeCount: quote.storeCount,
+    isMultiStore: quote.isMultiStore,
+    isEligible: quote.isEligible,
+    amountRemainingKobo: quote.amountRemainingKobo,
     deliveryFeeKobo: quote.deliveryFeeKobo,
     serviceFeeKobo: quote.serviceFeeKobo,
     totalKobo: quote.totalKobo,

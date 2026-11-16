@@ -15,6 +15,7 @@ import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollV
 import { useCartStore } from "../../../features/cart/store";
 import { getStoreById, type StoreInfo } from "../../../features/stores/data";
 import { fetchStore, fetchStoreProducts } from "../../../features/stores/api";
+import { apiBaseUrl } from "../../../features/api/client";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 
 type StoreTab = "All Products" | "Categories" | "About Store";
@@ -26,14 +27,24 @@ export default function StoreScreen() {
   const localStore = getStoreById(storeId ?? "");
   const [remoteStore, setRemoteStore] = useState<StoreInfo | null>(null);
   const [remoteProducts, setRemoteProducts] = useState<StoreInfo["products"] | null>(null);
+  const [remoteLoading, setRemoteLoading] = useState(Boolean(apiBaseUrl));
+  const [remoteError, setRemoteError] = useState("");
   const refreshStore = useCallback(async () => {
     if (!storeId) return;
-    const [storeResult, productResult] = await Promise.all([
-      fetchStore(storeId),
-      fetchStoreProducts(storeId),
-    ]);
-    if (storeResult) setRemoteStore(storeResult);
-    if (productResult) setRemoteProducts(productResult);
+    if (apiBaseUrl) setRemoteLoading(true);
+    setRemoteError("");
+    try {
+      const [storeResult, productResult] = await Promise.all([fetchStore(storeId), fetchStoreProducts(storeId)]);
+      if (storeResult) setRemoteStore(storeResult);
+      if (productResult) setRemoteProducts(productResult);
+    } catch (error) {
+      setRemoteStore(null);
+      setRemoteProducts(null);
+      setRemoteError(error instanceof Error ? error.message : "This store is currently unavailable.");
+      throw error;
+    } finally {
+      if (apiBaseUrl) setRemoteLoading(false);
+    }
   }, [storeId]);
 
   useEffect(() => {
@@ -41,7 +52,7 @@ export default function StoreScreen() {
       if (__DEV__) console.warn("Could not load store catalog from Go-Shopper API", error);
     });
   }, [refreshStore]);
-  const store = remoteStore ?? localStore;
+  const store = apiBaseUrl ? remoteStore : localStore;
   const { width } = useWindowDimensions();
   const addItem = useCartStore((state) => state.addItem);
   const itemCount = useCartStore((state) => state.lines.reduce((sum, line) => sum + line.quantity, 0));
@@ -56,11 +67,17 @@ export default function StoreScreen() {
     ? (remoteProducts ?? store?.products)?.filter((product) => product.category === selectedProductCategory) ?? []
     : remoteProducts ?? store?.products ?? [];
 
+  if (apiBaseUrl && remoteLoading && !remoteStore) {
+    return <SafeAreaView style={styles.screen}><View style={styles.missingStore}><Text style={styles.sectionTitle}>Loading store…</Text></View></SafeAreaView>;
+  }
+
   if (!store) {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.missingStore}>
-          <Text style={styles.sectionTitle}>Store not found</Text>
+          <Text style={styles.sectionTitle}>{remoteError ? "Store unavailable" : "Store not found"}</Text>
+          <Text style={styles.unavailableCopy}>{remoteError || "This store is not currently open for orders or has no available products."}</Text>
+          <Pressable onPress={() => void refreshStore().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryLabel}>Try again</Text></Pressable>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Icon color={darkColors.white} name="back" size={spacing.lg} />
           </Pressable>
@@ -311,5 +328,8 @@ const styles = StyleSheet.create({
   cartBadge: { position: "absolute", top: 0, right: 0, minWidth: spacing.md, height: spacing.md, alignItems: "center", justifyContent: "center", borderRadius: radius.round, backgroundColor: darkColors.peach },
   cartBadgeText: { ...typography.homeCaption, color: darkColors.dark },
   missingStore: { flex: 1, padding: spacing.lg, justifyContent: "center" },
+  unavailableCopy: { ...typography.storeBody, marginTop: spacing.sm, color: darkColors.mutedText },
+  retryButton: { minHeight: spacing.buttonHeight, marginTop: spacing.md, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: darkColors.primary },
+  retryLabel: { ...typography.button, color: darkColors.white },
   sectionTitle: { ...typography.storeTitle, color: darkColors.white },
 });

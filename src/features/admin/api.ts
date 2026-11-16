@@ -17,7 +17,7 @@ export type AdminActivity = { type: string; action: string; targetType: string; 
 export type AdminStore = {
   id: string; slug: string; name: string; category: string; tagline?: string; description?: string;
   logoUrl?: string; coverImageUrl?: string; address?: { line1?: string; city?: string; state?: string };
-  openHours?: string; isActive: boolean; isApproved: boolean; approvalStatus: "pending" | "approved" | "rejected";
+    openHours?: string; isOpen: boolean; isSuspended: boolean; isApproved: boolean; approvalStatus: "pending" | "approved" | "rejected";
   approvalReason?: string; suspensionReason?: string; suspendedAt?: string | null; createdAt?: string;
   productCount?: number; owner?: { name: string; email: string; phone: string } | null;
 };
@@ -32,7 +32,7 @@ export type AdminOrder = {
   subOrders: { subOrderNumber: string; storeName: string; storeId: string; status: string; merchandiseSubtotalKobo: number; totalKobo: number; items: { productName: string; productId: string; unitPriceKobo: number; quantity: number; lineTotalKobo: number; fulfilmentStatus?: string; unavailableReason?: string; refundAmountKobo?: number; refundStatus?: string; unavailableAt?: string | null; auditEvents?: { type?: string; reason?: string; at?: string }[] }[]; customerAction?: { reason?: string; decision?: string | null } }[];
   createdAt?: string; customer?: Pick<AdminUser, "firstName" | "lastName" | "email" | "phone" | "role"> | null;
 };
-export type PlatformSettings = { minimumStoreSubtotalKobo: number; deliveryFeeKobo: number; serviceFeeKobo: number; source: "environment" | "database"; updatedAt: string | null };
+export type PlatformSettings = { multiStoreCheckoutMinimumKobo: number; deliveryFeeKobo: number; serviceFeeKobo: number; source: "environment" | "database"; updatedAt: string | null };
 export type AdminRider = { id: string; firstName: string; lastName: string; email: string; phone: string; isSuspended: boolean; approvalStatus: "pending" | "approved" | "rejected"; vehicleType: string; isOnline: boolean; hasActiveDelivery: boolean; createdAt?: string };
 export type AdminApplication = { id: string; reference: string; type: "supermarket" | "rider"; status: string; data: Record<string, string | string[]>; feedback: string; reviewerNotes: string; history: { status: string; message: string; createdAt: string }[]; createdAt: string };
 export type AdminApplicationAudit = { actorUserId: string; action: string; reason: string; metadata: Record<string, unknown>; createdAt: string };
@@ -46,7 +46,7 @@ export async function fetchAdminStores(token: string, filters: { q?: string; app
 export async function fetchAdminStore(token: string, storeId: string) { return (await apiRequest<{ store: AdminStore }>(`/api/stores/admin/${encodeURIComponent(storeId)}`, { token })).store; }
 export async function fetchAdminStoreProducts(token: string, storeId: string) { return (await apiRequest<{ products: AdminProduct[] }>(`/api/stores/admin/${encodeURIComponent(storeId)}/products`, { token })).products; }
 export async function decideStoreApproval(token: string, storeId: string, decision: "approved" | "rejected", reason = "") { return apiRequest<{ store: AdminStore }>(`/api/stores/admin/${encodeURIComponent(storeId)}/approval`, { token, method: "PATCH", body: { decision, reason } }); }
-export async function setStoreActive(token: string, storeId: string, isActive: boolean, reason = "") { return apiRequest<{ store: AdminStore }>(`/api/stores/admin/${encodeURIComponent(storeId)}/status`, { token, method: "PATCH", body: { isActive, reason } }); }
+export async function setStoreSuspended(token: string, storeId: string, isSuspended: boolean, reason = "") { return apiRequest<{ store: AdminStore }>(`/api/stores/admin/${encodeURIComponent(storeId)}/status`, { token, method: "PATCH", body: { isSuspended, reason } }); }
 export async function createAdminStoreForOwner(token: string, input: { ownerEmail: string; name: string; category: string; description?: string }) { return apiRequest<{ store: AdminStore }>("/api/stores/admin/create-for-owner", { token, method: "POST", body: input }); }
 export async function fetchAdminUsers(token: string, filters: { q?: string; role?: string; status?: string; page?: number }) {
   const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)]));
@@ -61,7 +61,7 @@ export async function fetchAdminOrders(token: string, filters: { q?: string; pay
 }
 export async function fetchAdminOrder(token: string, orderId: string) { return (await apiRequest<{ order: AdminOrder }>(`/api/admin/orders/${encodeURIComponent(orderId)}`, { token })).order; }
 export async function fetchPlatformSettings(token: string) { return (await apiRequest<{ settings: PlatformSettings }>("/api/admin/settings", { token })).settings; }
-export async function updatePlatformSettings(token: string, settings: Pick<PlatformSettings, "minimumStoreSubtotalKobo" | "deliveryFeeKobo" | "serviceFeeKobo">) {
+export async function updatePlatformSettings(token: string, settings: Pick<PlatformSettings, "multiStoreCheckoutMinimumKobo" | "deliveryFeeKobo" | "serviceFeeKobo">) {
   return (await apiRequest<{ settings: PlatformSettings }>("/api/admin/settings", { token, method: "PUT", body: settings })).settings;
 }
 export async function fetchAdminDeliveries(token: string, filters: { q?: string; status?: string; page?: number } = {}) { const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)])); return apiRequest<{ deliveries: AdminDelivery[]; page: number; limit: number; total: number }>(`/api/admin/deliveries?${query}`, { token }); }
