@@ -3,9 +3,10 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../../components/ui/Button";
-import { AdminCard, AdminError, AdminLabel, AdminLoading, AdminPage, AdminSection, AdminValue, dateLabel, humanize } from "../../../components/admin/AdminUI";
+import { AdminCard, AdminEmpty, AdminError, AdminLabel, AdminLoading, AdminPage, AdminSection, AdminValue, dateLabel, humanize } from "../../../components/admin/AdminUI";
 import { adminErrorMessage, fetchAdminSummary, type AdminActivity, type AdminSummary } from "../../../features/admin/api";
 import { darkColors, radius, spacing, typography } from "../../../theme";
+import { StatTile } from "../../../components/ui/WorkflowComponents";
 
 const metrics: { key: keyof AdminSummary; label: string }[] = [
   { key: "registeredCustomers", label: "Customers" }, { key: "totalSupermarkets", label: "Supermarkets" },
@@ -26,9 +27,9 @@ export default function AdminDashboard() {
     {loading && !summary ? <AdminLoading label="Loading platform summary…" /> : null}
     {error ? <AdminError message={error} retry={() => void load()} /> : null}
     {summary ? <>
-      <View style={styles.grid}>{metrics.map(({ key, label }) => <View key={key} style={styles.metric}><Text style={styles.metricValue}>{summary[key].toLocaleString("en-NG")}</Text><Text style={styles.metricLabel}>{label}</Text></View>)}</View>
+      <View style={styles.grid}>{metrics.map(({ key, label }) => <StatTile key={key} label={label} value={summary[key].toLocaleString("en-NG")} />)}</View>
       <AdminSection title="Recent platform activity" />
-      {!activity.length ? <AdminCard><AdminValue>No recent activity recorded.</AdminValue></AdminCard> : activity.map((entry, index) => <AdminCard key={`${entry.targetId}-${index}`}><View style={styles.activityRow}><View style={styles.activityCopy}><AdminValue>{entry.name || `${humanize(entry.targetType)} ${entry.targetId}`}</AdminValue><AdminLabel>{entry.type === "admin_action" ? humanize(entry.action) : entry.action}</AdminLabel>{entry.reason ? <Text style={styles.reason}>{entry.reason}</Text> : null}</View><Text style={styles.date}>{dateLabel(entry.createdAt)}</Text></View></AdminCard>)}
+      {!activity.length ? <AdminEmpty icon="search" title="No recent activity" description="Platform events will appear here as they are recorded." /> : activity.map((entry, index) => <AdminCard key={`${entry.targetId}-${index}`}><View style={styles.activityRow}><View style={styles.activityCopy}><AdminValue>{entry.name || `${humanize(entry.targetType)} ${entry.targetId}`}</AdminValue><AdminLabel>{entry.type === "admin_action" ? humanize(entry.action) : entry.action}</AdminLabel>{entry.reason ? <Text style={styles.reason}>{entry.reason}</Text> : null}</View><Text style={styles.date}>{dateLabel(entry.createdAt)}</Text></View></AdminCard>)}
       <AdminSection title="Operations" />
       <View style={styles.operations}><Button title="Review onboarding applications" onPress={() => router.push("/(admin)/applications" as never)} /><Button title="Open store operations" onPress={() => router.push("/(supermarket)/(tabs)")} /><Pressable accessibilityRole="button" onPress={() => router.push("/(admin)/deliveries" as never)} style={styles.link}><Text style={styles.linkText}>Delivery operations</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.push("/(admin)/riders" as never)} style={styles.link}><Text style={styles.linkText}>Rider accounts</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.push("/(admin)/(tabs)/orders" as never)} style={styles.link}><Text style={styles.linkText}>Review order exceptions</Text></Pressable></View>
     </> : null}

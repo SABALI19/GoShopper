@@ -37,6 +37,10 @@ export default function SupermarketProductsScreen() {
   const [draft, setDraft] = useState<Draft>(blankDraft);
   const [imageUri, setImageUri] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [quickEdit, setQuickEdit] = useState<ManagedProduct | null>(null);
+  const [quickPrice, setQuickPrice] = useState("");
+  const [quickStock, setQuickStock] = useState("");
+  const [quickError, setQuickError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -55,6 +59,7 @@ export default function SupermarketProductsScreen() {
   useEffect(() => { const timer = setTimeout(() => void load(), search ? 250 : 0); return () => clearTimeout(timer); }, [load, search]);
   const openNew = () => { setEditing(null); setDraft(blankDraft); setImageUri(""); setDraftError(""); setSheetOpen(true); };
   const openEdit = (product: ManagedProduct) => { setEditing(product); setDraft({ name: product.name, description: product.description || "", category: product.category, price: String((product.priceKobo / 100).toFixed(2)), stock: String(product.stockQuantity), unitType: product.unitType || "unit", unitLabel: product.unitLabel || "each", barcode: product.barcode || "", isAvailable: product.isAvailable }); setImageUri(""); setDraftError(""); setSheetOpen(true); };
+  const openQuickEdit = (product: ManagedProduct) => { setQuickEdit(product); setQuickPrice(String((product.priceKobo / 100).toFixed(2))); setQuickStock(String(product.stockQuantity)); setQuickError(""); };
 
   const chooseImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -93,6 +98,20 @@ export default function SupermarketProductsScreen() {
     catch (cause) { setError(apiMessage(cause)); }
   };
 
+  const saveQuickEdit = async () => {
+    setQuickError("");
+    if (!quickEdit || !selectedStoreId) return setQuickError("Select an approved store before editing inventory.");
+    const priceNaira = Number(quickPrice);
+    const priceKobo = Math.round(priceNaira * 100);
+    const stockQuantity = Number(quickStock);
+    if (!/^\d+(\.\d{1,2})?$/.test(quickPrice) || !Number.isSafeInteger(priceKobo) || priceKobo < 0) return setQuickError("Enter a valid price in naira, up to two decimal places.");
+    if (!/^\d+$/.test(quickStock) || !Number.isSafeInteger(stockQuantity) || stockQuantity < 0) return setQuickError("Stock must be a whole number zero or higher.");
+    setSaving(true);
+    try { const token = await getToken(); if (!token) throw new Error("Your session expired. Sign in again."); await updateProduct(token, selectedStoreId, quickEdit.id, { priceKobo, stockQuantity }); setQuickEdit(null); await load(); }
+    catch (cause) { setQuickError(apiMessage(cause)); }
+    finally { setSaving(false); }
+  };
+
   return <SafeAreaView edges={["top"]} style={styles.screen}>
     <RefreshableScrollView refreshAction={load} contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.heading}><View><Text style={styles.title}>Products</Text><Text style={styles.copy}>Manage your catalogue and stock.</Text></View><Pressable accessibilityRole="button" onPress={openNew} style={styles.addButton}><Text style={styles.addText}>+ Add</Text></Pressable></View>
@@ -106,7 +125,7 @@ export default function SupermarketProductsScreen() {
       {loading && !products.length ? <><SkeletonCard /><SkeletonCard /></> : null}
       {error ? <SectionCard><Text style={styles.error}>{error}</Text><Button title="Retry" onPress={() => void load()} /></SectionCard> : null}
       {!loading && !error && !products.length ? <EmptyState icon="store" title="No products found" description={search || category || lowStockOnly ? "Try changing your search or filters." : "Add your first product to start building your catalogue."} /> : null}
-      {products.map(product => <ListCard key={product.id} right={<View style={styles.productActions}><Text style={styles.price}>{formatNaira(product.priceKobo)}</Text><Pressable accessibilityRole="button" onPress={() => openEdit(product)}><Text style={styles.editAction}>Edit</Text></Pressable></View>}>
+      {products.map(product => <ListCard key={product.id} right={<View style={styles.productActions}><Text style={styles.price}>{formatNaira(product.priceKobo)}</Text><Pressable accessibilityRole="button" onPress={() => openQuickEdit(product)}><Text style={styles.editAction}>Stock & price</Text></Pressable><Pressable accessibilityRole="button" onPress={() => openEdit(product)}><Text style={styles.editAction}>Edit details</Text></Pressable></View>}>
         {product.imageUrl ? <Image source={{ uri: product.imageUrl }} style={styles.productImage} /> : null}
         <Text numberOfLines={1} style={styles.productName}>{product.name}</Text><Text numberOfLines={1} style={styles.meta}>{product.category} · {product.stockQuantity} {product.unitLabel || "in stock"}</Text>
         {product.stockQuantity <= 5 ? <StatusChip label="Low stock" tone="warning" /> : <StatusChip label={product.isAvailable ? "Available" : "Unavailable"} tone={product.isAvailable ? "success" : "neutral"} />}
@@ -131,6 +150,15 @@ export default function SupermarketProductsScreen() {
         <Button title={editing ? "Save changes" : "Create product"} onPress={() => void save()} loading={saving} />
       </RefreshableScrollView>
     </BottomSheet>
+    <BottomSheet visible={Boolean(quickEdit)} title="Quick inventory edit" onClose={() => setQuickEdit(null)} style={styles.quickSheet}>
+      <View style={styles.sheetFields}>
+        <Text style={styles.meta}>{quickEdit?.name}</Text>
+        {field("Price (₦)", quickPrice, setQuickPrice, "decimal-pad")}
+        {field("Stock quantity", quickStock, setQuickStock, "number-pad")}
+        {quickError ? <Text accessibilityRole="alert" style={styles.error}>{quickError}</Text> : null}
+        <Button title="Save stock and price" onPress={() => void saveQuickEdit()} loading={saving} />
+      </View>
+    </BottomSheet>
   </SafeAreaView>;
 }
 
@@ -147,5 +175,5 @@ const styles = StyleSheet.create({
   filters: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs },
   pagination: { gap: spacing.xs, alignItems: "center" }, pagerButtons: { flexDirection: "row", gap: spacing.xs }, pageButton: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.button, backgroundColor: darkColors.storeSurface }, pageButtonText: { ...typography.storeCaption, color: darkColors.white }, disabled: { opacity: 0.45 },
   productImage: { width: spacing.xxl, height: spacing.xxl, borderRadius: radius.md }, productName: { ...typography.storeBody, color: darkColors.white }, meta: { ...typography.storeCaption, color: darkColors.mutedText }, price: { ...typography.storeBody, color: darkColors.white }, productActions: { alignItems: "flex-end", gap: spacing.xs }, editAction: { ...typography.storeCaption, color: darkColors.primary }, toggle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  error: { ...typography.storeCaption, color: darkColors.error }, bottomSheet: { maxHeight: "85%" }, sheetScroll: { flexShrink: 1 }, sheetFields: { gap: spacing.sm, paddingBottom: spacing.xl }, field: { gap: spacing.xxs }, multiline: { minHeight: spacing.recoverySuccessCardHeight / 3, textAlignVertical: "top", paddingTop: spacing.sm }, preview: { width: "100%", height: spacing.recoverySuccessCardHeight / 2, borderRadius: radius.card, backgroundColor: darkColors.storeSurface }, availability: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: spacing.xs },
+  error: { ...typography.storeCaption, color: darkColors.error }, bottomSheet: { maxHeight: "85%" }, quickSheet: { maxHeight: "60%" }, sheetScroll: { flexShrink: 1 }, sheetFields: { gap: spacing.sm, paddingBottom: spacing.xl }, field: { gap: spacing.xxs }, multiline: { minHeight: spacing.recoverySuccessCardHeight / 3, textAlignVertical: "top", paddingTop: spacing.sm }, preview: { width: "100%", height: spacing.recoverySuccessCardHeight / 2, borderRadius: radius.card, backgroundColor: darkColors.storeSurface }, availability: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: spacing.xs },
 });

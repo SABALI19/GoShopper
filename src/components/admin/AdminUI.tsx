@@ -3,9 +3,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { EmptyState } from "../ui/EmptyState";
 import { RefreshableScrollView } from "../ui/RefreshableScrollView";
 import { darkColors, radius, spacing, typography } from "../../theme";
-import { SectionCard, SkeletonCard } from "../ui/WorkflowComponents";
+import { ListCard, SectionCard, SkeletonCard, StatusChip } from "../ui/WorkflowComponents";
 
 export function AdminPage({ title, subtitle, refresh, children }: { title: string; subtitle?: string; refresh?: () => Promise<void>; children: ReactNode }) {
   return <SafeAreaView edges={["top"]} style={styles.screen}>
@@ -16,8 +17,8 @@ export function AdminPage({ title, subtitle, refresh, children }: { title: strin
 }
 
 export function AdminCard({ children, onPress }: { children: ReactNode; onPress?: () => void }) {
-  const content = <SectionCard style={styles.card}>{children}</SectionCard>;
-  return onPress ? <Pressable accessibilityRole="button" onPress={onPress}>{content}</Pressable> : content;
+  if (onPress) return <Pressable accessibilityRole="button" onPress={onPress} style={styles.card}><ListCard>{children}</ListCard></Pressable>;
+  return <SectionCard style={styles.card}>{children}</SectionCard>;
 }
 
 export function AdminLoading({ label = "Loading…" }: { label?: string }) {
@@ -27,6 +28,7 @@ export function AdminLoading({ label = "Loading…" }: { label?: string }) {
 export function AdminError({ message, retry }: { message: string; retry: () => void }) {
   return <View style={styles.error}><Text style={styles.errorText}>{message}</Text><Button title="Retry" onPress={retry} /></View>;
 }
+export function AdminEmpty({ title, description, icon = "store" }: { title: string; description: string; icon?: "store" | "search" }) { return <EmptyState icon={icon} title={title} description={description} />; }
 
 export function AdminSection({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return <View style={styles.sectionHead}><Text style={styles.section}>{title}</Text>{action && onAction ? <Pressable onPress={onAction}><Text style={styles.action}>{action}</Text></Pressable> : null}</View>;
@@ -36,7 +38,7 @@ export function AdminBack({ onPress }: { onPress: () => void }) { return <Pressa
 export function AdminLabel({ children }: { children: ReactNode }) { return <Text style={styles.label}>{children}</Text>; }
 export function AdminValue({ children, accent = false }: { children: ReactNode; accent?: boolean }) { return <Text style={[styles.value, accent && styles.accent]}>{children}</Text>; }
 export function AdminSearch({ value, onChangeText, placeholder }: { value: string; onChangeText: (value: string) => void; placeholder: string }) { return <TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={darkColors.placeholder} autoCapitalize="none" style={styles.search} />; }
-export function AdminFilters({ options, selected, onSelect }: { options: { label: string; value: string }[]; selected: string; onSelect: (value: string) => void }) { return <View style={styles.filters}>{options.map((option) => <Pressable key={option.value} accessibilityRole="tab" accessibilityState={{ selected: selected === option.value }} onPress={() => onSelect(option.value)} style={[styles.filter, selected === option.value && styles.filterSelected]}><Text style={[styles.filterText, selected === option.value && styles.filterTextSelected]}>{option.label}</Text></Pressable>)}</View>; }
+export function AdminFilters({ options, selected, onSelect }: { options: { label: string; value: string }[]; selected: string; onSelect: (value: string) => void }) { return <View style={styles.filters}>{options.map((option) => <Pressable key={option.value} accessibilityRole="tab" accessibilityState={{ selected: selected === option.value }} onPress={() => onSelect(option.value)}><StatusChip label={option.label} tone={selected === option.value ? "success" : "neutral"} /></Pressable>)}</View>; }
 export function money(kobo: number) { return `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 export function humanize(value?: string) { return (value || "—").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 export function dateLabel(value?: string) { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" }); }

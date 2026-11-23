@@ -2,7 +2,7 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { AdminCard, AdminError, AdminFilters, AdminLabel, AdminLoading, AdminPage, AdminSearch, AdminValue, dateLabel, humanize } from "../../components/admin/AdminUI";
+import { AdminCard, AdminEmpty, AdminError, AdminFilters, AdminLabel, AdminLoading, AdminPage, AdminSearch, AdminValue, dateLabel, humanize } from "../../components/admin/AdminUI";
 import { Button } from "../../components/ui/Button";
 import { adminErrorMessage, decideAdminApplication, fetchAdminApplications, type AdminApplication } from "../../features/admin/api";
 import { darkColors, radius, spacing, typography } from "../../theme";
@@ -19,7 +19,7 @@ export default function AdminApplicationsScreen() {
     <AdminFilters options={[{label:"All types",value:""},{label:"Supermarkets",value:"supermarket"},{label:"Riders",value:"rider"}]} selected={type} onSelect={setType}/>
     <AdminFilters options={statuses.map(value=>({label:value?humanize(value):"All statuses",value}))} selected={status} onSelect={setStatus}/>
     {loading?<AdminLoading label="Loading applications…"/>:null}{error?<AdminError message={error} retry={()=>void load()}/>:null}
-    {!loading&&!error&&!items.length?<AdminCard><AdminValue>No applications match these filters.</AdminValue></AdminCard>:null}
+    {!loading&&!error&&!items.length?<AdminEmpty icon="search" title="No matching applications" description="Applications will appear here when they match the selected filters." />:null}
     {items.map(app=><AdminCard key={app.id}>
       <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/(admin)/application/[applicationId]",params:{applicationId:app.id}} as never)} style={styles.head}><View style={styles.flex}><AdminValue accent>{app.reference}</AdminValue><AdminLabel>{humanize(app.type)} · {dateLabel(app.createdAt)}</AdminLabel></View><Text style={styles.status}>{humanize(app.status)}</Text></Pressable>
       <AdminValue>{String(app.data.businessName||app.data.fullName||"Applicant")}</AdminValue>

@@ -190,9 +190,10 @@ function StoreCard({ store, width, onPress }: { store: StoreInfo; width: number;
     <Pressable accessibilityRole="button" onPress={onPress} style={[styles.storeCard, { width }]}>
       <Image
         resizeMode="cover"
-        source={store.logo}
+        source={store.cover || store.logo}
         style={styles.storeImage}
       />
+      <Image resizeMode="cover" source={store.logo} style={styles.storeLogo} />
       <Text numberOfLines={1} style={styles.storeName}>
         {store.name}
       </Text>
@@ -302,6 +303,7 @@ const styles = StyleSheet.create({
     rowGap: spacing.homeGridRowGap,
   },
   storeCard: {
+    position: "relative",
     overflow: "hidden",
   },
   storeImage: {
@@ -309,6 +311,7 @@ const styles = StyleSheet.create({
     aspectRatio: spacing.homeStoreImageAspectRatio,
     borderRadius: radius.card,
   },
+  storeLogo: { position: "absolute", top: spacing.xs, left: spacing.xs, width: spacing.storeLogoSize / 2, height: spacing.storeLogoSize / 2, borderRadius: radius.md, borderWidth: 1, borderColor: darkColors.white, backgroundColor: darkColors.storeSurface },
   storeName: {
     ...typography.homeBody,
     marginTop: spacing.xs,

@@ -5,7 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../features/auth/AuthProvider";
-import { apiMessage, fetchManagedStore, fetchManagedStores, removeStoreLogo, updateManagedStore, uploadStoreLogo } from "../../features/supermarket/api";
+import { apiMessage, fetchManagedStore, fetchManagedStores, removeStoreBanner, removeStoreLogo, updateManagedStore, uploadStoreBanner, uploadStoreLogo } from "../../features/supermarket/api";
 import { useSupermarketStore } from "../../features/supermarket/store";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -27,6 +27,10 @@ export default function SupermarketStoreProfileScreen() {
   const [logoUrl, setLogoUrl] = useState("");
   const [hasManagedLogo, setHasManagedLogo] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [hasManagedBanner, setHasManagedBanner] = useState(false);
+  const [bannerBusy, setBannerBusy] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -37,6 +41,7 @@ export default function SupermarketStoreProfileScreen() {
       if (!storeId) return;
       const store = await fetchManagedStore(token, storeId);
       setLogoUrl(store.logoUrl || ""); setHasManagedLogo(Boolean(store.hasManagedLogo));
+      setBannerUrl(store.coverImageUrl || ""); setHasManagedBanner(Boolean(store.hasManagedBanner)); setBannerPreview("");
       setForm({ name: store.name || "", category: store.category || "", tagline: store.tagline || "", description: store.description || "", line1: store.address?.line1 || "", city: store.address?.city || "", state: store.address?.state || "", country: store.address?.country || "Nigeria", openHours: store.openHours || "", isOpen: store.isOpen });
     } catch (cause) { setError(apiMessage(cause)); }
     finally { setLoading(false); }
@@ -81,6 +86,29 @@ export default function SupermarketStoreProfileScreen() {
     finally { setLogoBusy(false); }
   };
 
+  const chooseBanner = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { setError("Allow photo library access to choose your store banner."); return; }
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [5, 2], quality: 1 });
+    if (picked.canceled || !picked.assets[0]) return;
+    const asset = picked.assets[0];
+    const context = ImageManipulator.manipulate(asset.uri);
+    context.resize({ width: 1600, height: 640 });
+    const rendered = await context.renderAsync();
+    const compressed = await rendered.saveAsync({ compress: 0.82, format: SaveFormat.JPEG });
+    setBannerPreview(compressed.uri); setBannerBusy(true); setError(""); setNotice("");
+    try { const token = await getToken(); if (!token || !activeStoreId) throw new Error("Your session or selected store could not be verified."); await uploadStoreBanner(token, activeStoreId, compressed.uri); await load(); setNotice("Store banner updated."); }
+    catch (cause) { setError(apiMessage(cause)); }
+    finally { setBannerBusy(false); }
+  };
+
+  const deleteBanner = async () => {
+    setBannerBusy(true); setError(""); setNotice("");
+    try { const token = await getToken(); if (!token || !activeStoreId) throw new Error("Your session or selected store could not be verified."); await removeStoreBanner(token, activeStoreId); await load(); setNotice("Store banner removed."); }
+    catch (cause) { setError(apiMessage(cause)); }
+    finally { setBannerBusy(false); }
+  };
+
   return <SafeAreaView edges={["top"]} style={styles.screen}>
     <RefreshableScrollView refreshAction={load} contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Store profile</Text><Text style={styles.subtitle}>Keep your storefront information and opening hours up to date.</Text>
@@ -90,6 +118,12 @@ export default function SupermarketStoreProfileScreen() {
         <SectionCard title="Store logo">
           <View style={styles.logoRow}>{logoUrl ? <Image accessibilityLabel="Current store logo" source={{ uri: logoUrl }} style={styles.logo} /> : <View style={styles.logoPlaceholder}><Text style={styles.logoInitial}>{form.name.trim().charAt(0).toUpperCase() || "G"}</Text></View>}<View style={styles.logoActions}><Button title={logoBusy ? "Saving logo…" : logoUrl ? "Replace logo" : "Upload logo"} onPress={() => void chooseLogo()} loading={logoBusy} />{hasManagedLogo ? <Pressable accessibilityRole="button" disabled={logoBusy} onPress={() => void deleteLogo()}><Text style={styles.removeLogo}>Remove logo</Text></Pressable> : null}</View></View>
           {logoUrl && !hasManagedLogo ? <Text style={styles.hint}>This existing logo is externally hosted. Upload a new image to replace it.</Text> : null}
+        </SectionCard>
+        <SectionCard title="Store banner">
+          {bannerPreview || bannerUrl ? <Image accessibilityLabel="Store banner preview" source={{ uri: bannerPreview || bannerUrl }} style={styles.banner} /> : <View style={styles.bannerPlaceholder}><Text style={styles.hint}>Your storefront banner preview will appear here.</Text></View>}
+          <Button title={bannerBusy ? "Saving banner…" : bannerUrl ? "Replace banner" : "Upload banner"} onPress={() => void chooseBanner()} loading={bannerBusy} />
+          {hasManagedBanner ? <Pressable accessibilityRole="button" disabled={bannerBusy} onPress={() => void deleteBanner()}><Text style={styles.removeLogo}>Remove banner</Text></Pressable> : null}
+          {bannerUrl && !hasManagedBanner ? <Text style={styles.hint}>This existing banner is externally hosted. Upload a new image to replace it.</Text> : null}
         </SectionCard>
         <SectionCard title="Store details">
           {input("Store name", "name", form.name, setForm)}{input("Main category", "category", form.category, setForm)}{input("Tagline", "tagline", form.tagline, setForm)}{input("Description", "description", form.description, setForm, true)}
@@ -120,5 +154,5 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: darkColors.background }, page: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md }, title: { ...typography.orderTitle, color: darkColors.white }, subtitle: { ...typography.storeCaption, color: darkColors.mutedText },
   field: { gap: spacing.xxs }, label: { ...typography.storeCaption, color: darkColors.mutedText }, input: { minHeight: spacing.homeSearchHeight, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: darkColors.inputBorder, borderRadius: radius.input, backgroundColor: darkColors.inputSurface, color: darkColors.white, ...typography.input }, multiline: { minHeight: spacing.metricCardHeight, paddingTop: spacing.sm, textAlignVertical: "top" },
   openRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }, openCopy: { flex: 1, gap: spacing.xxs }, hint: { ...typography.storeCaption, color: darkColors.mutedText }, error: { ...typography.storeCaption, color: darkColors.error }, success: { ...typography.storeCaption, color: darkColors.success },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md }, logo: { width: spacing.profileIconSize * 2, height: spacing.profileIconSize * 2, borderRadius: radius.md, backgroundColor: darkColors.inputSurface }, logoPlaceholder: { width: spacing.profileIconSize * 2, height: spacing.profileIconSize * 2, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: darkColors.primaryTint }, logoInitial: { ...typography.orderTitle, color: darkColors.primary }, logoActions: { flex: 1, gap: spacing.xs }, removeLogo: { ...typography.storeCaption, padding: spacing.xs, color: darkColors.primary, textAlign: "center" },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md }, logo: { width: spacing.profileIconSize * 2, height: spacing.profileIconSize * 2, borderRadius: radius.md, backgroundColor: darkColors.inputSurface }, logoPlaceholder: { width: spacing.profileIconSize * 2, height: spacing.profileIconSize * 2, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: darkColors.primaryTint }, logoInitial: { ...typography.orderTitle, color: darkColors.primary }, logoActions: { flex: 1, gap: spacing.xs }, removeLogo: { ...typography.storeCaption, padding: spacing.xs, color: darkColors.primary, textAlign: "center" }, banner: { width: "100%", aspectRatio: 2.5, borderRadius: radius.card, backgroundColor: darkColors.inputSurface }, bannerPlaceholder: { width: "100%", aspectRatio: 2.5, alignItems: "center", justifyContent: "center", padding: spacing.md, borderRadius: radius.card, backgroundColor: darkColors.inputSurface },
 });

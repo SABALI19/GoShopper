@@ -7,7 +7,9 @@ export type ManagedStore = {
   category: string;
   tagline?: string;
   logoUrl?: string;
+  coverImageUrl?: string;
   hasManagedLogo?: boolean;
+  hasManagedBanner?: boolean;
   isOpen: boolean;
   isSuspended: boolean;
   isApproved: boolean;
@@ -154,6 +156,14 @@ export async function removeStoreLogo(token: string, storeId: string) {
   return apiRequest<{ store: ManagedStore }>(`/api/stores/mine/${encodeURIComponent(storeId)}/logo`, { token, method: "DELETE" });
 }
 
+export async function uploadStoreBanner(token: string, storeId: string, uri: string) {
+  return apiUploadImage<{ store: ManagedStore }>(`/api/stores/mine/${encodeURIComponent(storeId)}/banner`, token, uri);
+}
+
+export async function removeStoreBanner(token: string, storeId: string) {
+  return apiRequest<{ store: ManagedStore }>(`/api/stores/mine/${encodeURIComponent(storeId)}/banner`, { token, method: "DELETE" });
+}
+
 export async function fetchProducts(token: string, storeId: string, params: { page?: number; limit?: number; q?: string; category?: string; availability?: string; lowStock?: boolean } = {}) {
   const query = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 20), ...(params.q ? { q: params.q } : {}), ...(params.category ? { category: params.category } : {}), ...(params.availability && params.availability !== "all" ? { availability: params.availability } : {}), ...(params.lowStock ? { lowStock: "true" } : {}) });
   return apiRequest<{ products: ManagedProduct[]; categories: string[]; lowStockCount: number; page: number; limit: number; total: number }>(`/api/stores/mine/${encodeURIComponent(storeId)}/products?${query}`, { token });
@@ -195,16 +205,20 @@ export async function reportStoreCannotFulfil(token: string, storeId: string, or
 
 export function apiMessage(error: unknown) {
   if (error && typeof error === "object" && "status" in error) {
-    if (error.status === 401) return "Your session expired. Sign in again to continue.";
-    if (error.status === 403) {
-      const code = "code" in error && typeof error.code === "string" ? error.code : "";
+    const status = typeof error.status === "number" ? error.status : 0;
+    const code = "code" in error && typeof error.code === "string" ? error.code : "";
+    if (status === 401 || code === "SESSION_EXPIRED") return "Your session expired. Sign in again to continue.";
+    if (status === 403 || status === 404) {
+      if (code === "WRONG_ROLE") return "Sign in with your supermarket account to continue.";
       if (code === "APPROVAL_REQUIRED") return "Your supermarket account is awaiting admin approval. Store tools will unlock after approval.";
       if (code === "ACCOUNT_SUSPENDED") return "This supermarket account is suspended. Contact Go-Shopper support.";
-      if (code === "FORBIDDEN") return "The signed-in account does not have the supermarket role. Sign in with your supermarket account.";
-      if ("message" in error && typeof error.message === "string" && error.message) return error.message;
-      return "This account does not have supermarket access.";
+      if (code === "STORE_NOT_FOUND") return "This store could not be found.";
+      if (code === "NOT_STORE_OWNER") return "This store belongs to another account.";
+      if (code === "STORE_SUSPENDED") return "This store is suspended. Contact Go-Shopper support.";
+      if (code === "STORE_NOT_APPROVED") return "This store needs approval before it can be managed.";
+      const message = "message" in error && typeof error.message === "string" && error.message ? error.message : "The request could not be completed.";
+      return `${message}\nError code: ${code || "UNKNOWN"} · HTTP ${status}`;
     }
-    if (error.status === 404) return "This store or order is not available to this account.";
   }
   return error && typeof error === "object" && "message" in error && typeof error.message === "string"
     ? error.message

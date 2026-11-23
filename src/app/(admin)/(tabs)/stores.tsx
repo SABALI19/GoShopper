@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../../components/ui/Button";
-import { AdminCard, AdminError, AdminFilters, AdminLabel, AdminLoading, AdminPage, AdminSearch, AdminValue, humanize } from "../../../components/admin/AdminUI";
+import { AdminCard, AdminEmpty, AdminError, AdminFilters, AdminLabel, AdminLoading, AdminPage, AdminSearch, AdminValue, humanize } from "../../../components/admin/AdminUI";
 import { adminErrorMessage, createAdminStoreForOwner, fetchAdminStores, type AdminStore } from "../../../features/admin/api";
 import { darkColors, spacing, typography } from "../../../theme";
 
@@ -23,7 +23,7 @@ export default function AdminStoresScreen() {
     <AdminFilters options={approvals} selected={approval} onSelect={setApproval} />
     <AdminFilters options={statuses} selected={status} onSelect={setStatus} />
     {loading ? <AdminLoading label="Loading supermarkets…" /> : null}{error ? <AdminError message={error} retry={() => void load()} /> : null}
-    {!loading && !error && !stores.length ? <AdminCard><AdminValue>No supermarkets match these filters.</AdminValue></AdminCard> : null}
+    {!loading && !error && !stores.length ? <AdminEmpty icon="store" title="No matching supermarkets" description="Try a different search or approval filter." /> : null}
     {stores.map((store) => <AdminCard key={store.id} onPress={() => router.push({ pathname: "/(admin)/store/[storeId]", params: { storeId: store.id } } as never)}>
       <View style={styles.top}><View style={styles.flex}><AdminValue>{store.name}</AdminValue><AdminLabel>{store.category} · {store.id}</AdminLabel></View><Text style={styles.status}>{humanize(store.approvalStatus)}</Text></View>
       <View style={styles.owner}><AdminLabel>Owner</AdminLabel><Text style={styles.copy}>{store.owner?.name || "Unknown owner"} · {store.owner?.email || "No email"}</Text>{store.owner?.phone ? <Text style={styles.copy}>{store.owner.phone}</Text> : null}</View>
