@@ -1,3 +1,5 @@
+import { File, UploadType } from "expo-file-system";
+
 export const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "") || "";
 
 export type ApiError = Error & { status?: number; code?: string; payload?: unknown };
@@ -38,17 +40,28 @@ export async function apiRequest<T>(path: string, options: {
 
 export async function apiUploadImage<T>(path: string, token: string, imageUri: string): Promise<T> {
   if (!apiBaseUrl) throw new Error("EXPO_PUBLIC_API_URL is not configured");
-  const imageResponse = await fetch(imageUri);
-  if (!imageResponse.ok) throw new Error("The selected image could not be read.");
-  const blob = await imageResponse.blob();
-  const send = (accessToken: string) => fetch(`${apiBaseUrl}${path}`, { method: "POST", headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}`, "Content-Type": "application/octet-stream" }, body: blob });
+  const file = new File(imageUri);
+  if (!file.exists || file.size === null || file.size <= 0) throw new Error("The selected image could not be read.");
+  const send = (accessToken: string) => file.upload(`${apiBaseUrl}${path}`, {
+    httpMethod: "POST",
+    uploadType: UploadType.BINARY_CONTENT,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/octet-stream",
+    },
+  });
   let response = await send(token);
   if (response.status === 401) {
     const { refreshMobileSession } = await import("../auth/AuthProvider");
     const renewed = await refreshMobileSession();
     if (renewed) response = await send(renewed);
   }
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(payload?.error?.message || `Image upload failed (${response.status}).`);
+  let payload: unknown = null;
+  try { payload = JSON.parse(response.body); } catch { /* Keep a useful status error for non-JSON responses. */ }
+  if (response.status < 200 || response.status >= 300) {
+    const message = (payload as { error?: { message?: string } } | null)?.error?.message;
+    throw new Error(message || `Image upload failed (${response.status}).`);
+  }
   return payload as T;
 }
