@@ -196,7 +196,14 @@ export async function reportStoreCannotFulfil(token: string, storeId: string, or
 export function apiMessage(error: unknown) {
   if (error && typeof error === "object" && "status" in error) {
     if (error.status === 401) return "Your session expired. Sign in again to continue.";
-    if (error.status === 403) return "This account does not have supermarket access.";
+    if (error.status === 403) {
+      const code = "code" in error && typeof error.code === "string" ? error.code : "";
+      if (code === "APPROVAL_REQUIRED") return "Your supermarket account is awaiting admin approval. Store tools will unlock after approval.";
+      if (code === "ACCOUNT_SUSPENDED") return "This supermarket account is suspended. Contact Go-Shopper support.";
+      if (code === "FORBIDDEN") return "The signed-in account does not have the supermarket role. Sign in with your supermarket account.";
+      if ("message" in error && typeof error.message === "string" && error.message) return error.message;
+      return "This account does not have supermarket access.";
+    }
     if (error.status === 404) return "This store or order is not available to this account.";
   }
   return error && typeof error === "object" && "message" in error && typeof error.message === "string"
