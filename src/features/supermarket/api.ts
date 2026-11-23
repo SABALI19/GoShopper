@@ -1,4 +1,4 @@
-import { apiRequest } from "../api/client";
+import { apiRequest, apiUploadImage } from "../api/client";
 
 export type ManagedStore = {
   id: string;
@@ -7,10 +7,29 @@ export type ManagedStore = {
   category: string;
   tagline?: string;
   logoUrl?: string;
+  hasManagedLogo?: boolean;
   isOpen: boolean;
   isSuspended: boolean;
   isApproved: boolean;
   openHours?: string;
+  description?: string;
+  address?: { line1?: string; city?: string; state?: string; country?: string };
+};
+
+export type ManagedProduct = {
+  id: string;
+  productKey: string;
+  name: string;
+  description?: string;
+  category: string;
+  imageUrl?: string;
+  priceKobo: number;
+  stockQuantity: number;
+  unitType: "unit" | "weight";
+  unitLabel: string;
+  barcode?: string;
+  isAvailable: boolean;
+  updatedAt?: string;
 };
 
 export type DashboardSummary = {
@@ -116,6 +135,44 @@ export async function updateStoreOrderStatus(token: string, storeId: string, ord
     `/api/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(orderId)}/fulfillment`,
     { token, method: "PATCH", body: { status, ...(reason ? { reason } : {}) } },
   );
+}
+
+export async function fetchManagedStore(token: string, storeId: string) {
+  const result = await apiRequest<{ store: ManagedStore & { description?: string; address?: ManagedStore["address"] } }>(`/api/stores/mine/${encodeURIComponent(storeId)}`, { token });
+  return result.store;
+}
+
+export async function updateManagedStore(token: string, storeId: string, data: Partial<Pick<ManagedStore, "name" | "category" | "tagline" | "description" | "openHours" | "isOpen">> & { address?: ManagedStore["address"] }) {
+  return apiRequest<{ store: ManagedStore }>(`/api/stores/${encodeURIComponent(storeId)}`, { token, method: "PATCH", body: data });
+}
+
+export async function uploadStoreLogo(token: string, storeId: string, uri: string) {
+  return apiUploadImage<{ store: ManagedStore }>(`/api/stores/mine/${encodeURIComponent(storeId)}/logo`, token, uri);
+}
+
+export async function removeStoreLogo(token: string, storeId: string) {
+  return apiRequest<{ store: ManagedStore }>(`/api/stores/mine/${encodeURIComponent(storeId)}/logo`, { token, method: "DELETE" });
+}
+
+export async function fetchProducts(token: string, storeId: string, params: { page?: number; limit?: number; q?: string; category?: string; availability?: string; lowStock?: boolean } = {}) {
+  const query = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 20), ...(params.q ? { q: params.q } : {}), ...(params.category ? { category: params.category } : {}), ...(params.availability && params.availability !== "all" ? { availability: params.availability } : {}), ...(params.lowStock ? { lowStock: "true" } : {}) });
+  return apiRequest<{ products: ManagedProduct[]; categories: string[]; lowStockCount: number; page: number; limit: number; total: number }>(`/api/stores/mine/${encodeURIComponent(storeId)}/products?${query}`, { token });
+}
+
+export async function createProduct(token: string, storeId: string, data: Omit<ManagedProduct, "id" | "productKey" | "imageUrl" | "updatedAt">) {
+  return apiRequest<{ product: ManagedProduct }>(`/api/stores/${encodeURIComponent(storeId)}/products`, { token, method: "POST", body: data });
+}
+
+export async function updateProduct(token: string, storeId: string, productId: string, data: Partial<ManagedProduct>) {
+  return apiRequest<{ product: ManagedProduct }>(`/api/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}`, { token, method: "PATCH", body: data });
+}
+
+export async function uploadProductImage(token: string, storeId: string, productId: string, uri: string) {
+  return apiUploadImage<{ product: ManagedProduct }>(`/api/stores/mine/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}/image`, token, uri);
+}
+
+export async function removeProductImage(token: string, storeId: string, productId: string) {
+  return apiRequest<{ product: ManagedProduct }>(`/api/stores/mine/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}/image`, { token, method: "DELETE" });
 }
 
 export async function confirmStoreHandover(token: string, storeId: string, orderId: string) {

@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { RefreshableScrollView } from "../ui/RefreshableScrollView";
 import { darkColors, radius, spacing, typography } from "../../theme";
+import { SectionCard, SkeletonCard } from "../ui/WorkflowComponents";
 
 export function AdminPage({ title, subtitle, refresh, children }: { title: string; subtitle?: string; refresh?: () => Promise<void>; children: ReactNode }) {
   return <SafeAreaView edges={["top"]} style={styles.screen}>
@@ -15,12 +16,12 @@ export function AdminPage({ title, subtitle, refresh, children }: { title: strin
 }
 
 export function AdminCard({ children, onPress }: { children: ReactNode; onPress?: () => void }) {
-  const content = <View style={styles.card}>{children}</View>;
+  const content = <SectionCard style={styles.card}>{children}</SectionCard>;
   return onPress ? <Pressable accessibilityRole="button" onPress={onPress}>{content}</Pressable> : content;
 }
 
 export function AdminLoading({ label = "Loading…" }: { label?: string }) {
-  return <View style={styles.center}><ActivityIndicator color={darkColors.primary} /><Text style={styles.muted}>{label}</Text></View>;
+  return <View accessibilityLabel={label} style={styles.center}><SkeletonCard lines={2} /></View>;
 }
 
 export function AdminError({ message, retry }: { message: string; retry: () => void }) {
