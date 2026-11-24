@@ -127,7 +127,10 @@ export default function StoreScreen() {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 key={tab}
-                onPress={() => setSelectedTab(tab)}
+                onPress={() => {
+                  setSelectedTab(tab);
+                  if (tab === "All Products") setSelectedProductCategory(null);
+                }}
                 style={[styles.tab, active && styles.activeTab]}
               >
                 <Text numberOfLines={1} style={[styles.tabText, active && styles.activeTabText]}>{tab}</Text>
@@ -164,7 +167,11 @@ export default function StoreScreen() {
               ))}
             </View>
           ) : (
-            <StoreEmpty text="This store’s products will appear here when its catalog is available." />
+            <StoreEmpty
+              text={selectedProductCategory ? `No available products found in ${selectedProductCategory}.` : "This store’s products will appear here when its catalog is available."}
+              actionLabel={selectedProductCategory ? "View all products" : undefined}
+              onAction={selectedProductCategory ? () => setSelectedProductCategory(null) : undefined}
+            />
           )
         ) : null}
 
@@ -226,8 +233,8 @@ function StoreStat({ icon, label }: { icon: "star" | "clock" | "pin"; label: str
   );
 }
 
-function StoreEmpty({ text }: { text: string }) {
-  return <View style={styles.emptyPanel}><Text style={styles.emptyText}>{text}</Text></View>;
+function StoreEmpty({ text, actionLabel, onAction }: { text: string; actionLabel?: string; onAction?: () => void }) {
+  return <View style={styles.emptyPanel}><Text style={styles.emptyText}>{text}</Text>{actionLabel && onAction ? <Pressable accessibilityRole="button" onPress={onAction} style={styles.emptyAction}><Text style={styles.emptyActionText}>{actionLabel}</Text></Pressable> : null}</View>;
 }
 
 function formatNaira(priceKobo: number) {
@@ -322,8 +329,10 @@ const styles = StyleSheet.create({
   aboutText: { ...typography.storeCaption, color: darkColors.white },
   bullet: { ...typography.storeCaption, marginLeft: spacing.xs, color: darkColors.white },
   valueText: { ...typography.storeCaption, marginTop: spacing.xxs, color: darkColors.white },
-  emptyPanel: { minHeight: spacing.xxl * 2, padding: spacing.lg, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: darkColors.storeSurface },
+  emptyPanel: { minHeight: spacing.xxl * 2, padding: spacing.lg, alignItems: "center", justifyContent: "center", gap: spacing.sm, borderRadius: radius.md, backgroundColor: darkColors.storeSurface },
   emptyText: { ...typography.storeBody, color: darkColors.mutedText, textAlign: "center" },
+  emptyAction: { minHeight: spacing.buttonHeight, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.button, backgroundColor: darkColors.primary },
+  emptyActionText: { ...typography.button, color: darkColors.white },
   cartFab: { position: "absolute", right: spacing.md, bottom: spacing.md, width: spacing.storeFabSize, height: spacing.storeFabSize, alignItems: "center", justifyContent: "center", borderRadius: radius.round, backgroundColor: darkColors.primary, elevation: spacing.xs },
   cartBadge: { position: "absolute", top: 0, right: 0, minWidth: spacing.md, height: spacing.md, alignItems: "center", justifyContent: "center", borderRadius: radius.round, backgroundColor: darkColors.peach },
   cartBadgeText: { ...typography.homeCaption, color: darkColors.dark },

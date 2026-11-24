@@ -23,6 +23,7 @@ export default function SupermarketStoreProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [hasManagedLogo, setHasManagedLogo] = useState(false);
@@ -31,9 +32,10 @@ export default function SupermarketStoreProfileScreen() {
   const [hasManagedBanner, setHasManagedBanner] = useState(false);
   const [bannerBusy, setBannerBusy] = useState(false);
   const [bannerPreview, setBannerPreview] = useState("");
+  const [bannerError, setBannerError] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true); setError("");
+    setLoading(true); setLoadError("");
     try {
       const token = await getToken(); if (!token) throw new Error("Your session expired. Sign in again.");
       let storeId = selectedStoreId;
@@ -43,7 +45,7 @@ export default function SupermarketStoreProfileScreen() {
       setLogoUrl(store.logoUrl || ""); setHasManagedLogo(Boolean(store.hasManagedLogo));
       setBannerUrl(store.coverImageUrl || ""); setHasManagedBanner(Boolean(store.hasManagedBanner)); setBannerPreview("");
       setForm({ name: store.name || "", category: store.category || "", tagline: store.tagline || "", description: store.description || "", line1: store.address?.line1 || "", city: store.address?.city || "", state: store.address?.state || "", country: store.address?.country || "Nigeria", openHours: store.openHours || "", isOpen: store.isOpen });
-    } catch (cause) { setError(apiMessage(cause)); }
+    } catch (cause) { setLoadError(apiMessage(cause)); }
     finally { setLoading(false); }
   }, [getToken, selectedStoreId, setStores, stores.length]);
   useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
@@ -96,16 +98,16 @@ export default function SupermarketStoreProfileScreen() {
     context.resize({ width: 1600, height: 640 });
     const rendered = await context.renderAsync();
     const compressed = await rendered.saveAsync({ compress: 0.82, format: SaveFormat.JPEG });
-    setBannerPreview(compressed.uri); setBannerBusy(true); setError(""); setNotice("");
+    setBannerPreview(compressed.uri); setBannerBusy(true); setBannerError(""); setError(""); setNotice("");
     try { const token = await getToken(); if (!token || !activeStoreId) throw new Error("Your session or selected store could not be verified."); await uploadStoreBanner(token, activeStoreId, compressed.uri); await load(); setNotice("Store banner updated."); }
-    catch (cause) { setError(apiMessage(cause)); }
+    catch (cause) { setBannerError(apiMessage(cause)); }
     finally { setBannerBusy(false); }
   };
 
   const deleteBanner = async () => {
-    setBannerBusy(true); setError(""); setNotice("");
+    setBannerBusy(true); setBannerError(""); setError(""); setNotice("");
     try { const token = await getToken(); if (!token || !activeStoreId) throw new Error("Your session or selected store could not be verified."); await removeStoreBanner(token, activeStoreId); await load(); setNotice("Store banner removed."); }
-    catch (cause) { setError(apiMessage(cause)); }
+    catch (cause) { setBannerError(apiMessage(cause)); }
     finally { setBannerBusy(false); }
   };
 
@@ -113,8 +115,8 @@ export default function SupermarketStoreProfileScreen() {
     <RefreshableScrollView refreshAction={load} contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Store profile</Text><Text style={styles.subtitle}>Keep your storefront information and opening hours up to date.</Text>
       {loading ? <><SkeletonCard /><SkeletonCard /></> : null}
-      {!loading && !activeStoreId && !error ? <EmptyState icon="store" title="No approved store yet" description="Your store profile tools will be available once your application is approved." /> : null}
-      {!loading && activeStoreId ? <>
+      {!loading && !activeStoreId && !loadError ? <EmptyState icon="store" title="No approved store yet" description="Your store profile tools will be available once your application is approved." /> : null}
+      {!loading && activeStoreId && !loadError ? <>
         <SectionCard title="Store logo">
           <View style={styles.logoRow}>{logoUrl ? <Image accessibilityLabel="Current store logo" source={{ uri: logoUrl }} style={styles.logo} /> : <View style={styles.logoPlaceholder}><Text style={styles.logoInitial}>{form.name.trim().charAt(0).toUpperCase() || "G"}</Text></View>}<View style={styles.logoActions}><Button title={logoBusy ? "Saving logo…" : logoUrl ? "Replace logo" : "Upload logo"} onPress={() => void chooseLogo()} loading={logoBusy} />{hasManagedLogo ? <Pressable accessibilityRole="button" disabled={logoBusy} onPress={() => void deleteLogo()}><Text style={styles.removeLogo}>Remove logo</Text></Pressable> : null}</View></View>
           {logoUrl && !hasManagedLogo ? <Text style={styles.hint}>This existing logo is externally hosted. Upload a new image to replace it.</Text> : null}
@@ -124,6 +126,7 @@ export default function SupermarketStoreProfileScreen() {
           <Button title={bannerBusy ? "Saving banner…" : bannerUrl ? "Replace banner" : "Upload banner"} onPress={() => void chooseBanner()} loading={bannerBusy} />
           {hasManagedBanner ? <Pressable accessibilityRole="button" disabled={bannerBusy} onPress={() => void deleteBanner()}><Text style={styles.removeLogo}>Remove banner</Text></Pressable> : null}
           {bannerUrl && !hasManagedBanner ? <Text style={styles.hint}>This existing banner is externally hosted. Upload a new image to replace it.</Text> : null}
+          {bannerError ? <Text accessibilityRole="alert" style={styles.error}>{bannerError}</Text> : null}
         </SectionCard>
         <SectionCard title="Store details">
           {input("Store name", "name", form.name, setForm)}{input("Main category", "category", form.category, setForm)}{input("Tagline", "tagline", form.tagline, setForm)}{input("Description", "description", form.description, setForm, true)}
@@ -137,10 +140,9 @@ export default function SupermarketStoreProfileScreen() {
           <StatusChip label={form.isOpen ? "Open for orders" : "Closed to orders"} tone={form.isOpen ? "success" : "neutral"} />
         </SectionCard>
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}{notice ? <Text accessibilityLiveRegion="polite" style={styles.success}>{notice}</Text> : null}
-        {error ? <Button title="Retry loading" onPress={() => void load()} /> : null}
         <Button title="Save store profile" onPress={() => void save()} loading={saving} />
       </> : null}
-      {error && !loading && !activeStoreId ? <SectionCard><Text style={styles.error}>{error}</Text><Button title="Retry" onPress={() => void load()} /></SectionCard> : null}
+      {!loading && loadError ? <SectionCard><Text style={styles.error}>{loadError}</Text><Button title="Retry loading" onPress={() => void load()} /></SectionCard> : null}
     </RefreshableScrollView>
   </SafeAreaView>;
 }
