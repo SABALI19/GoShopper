@@ -7,9 +7,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
+import { BottomSheet } from "../../../components/ui/WorkflowComponents";
 import { apiBaseUrl } from "../../../features/api/client";
-import { apiMessage, confirmStoreHandover, fetchStoreOrder, reportStoreCannotFulfil, reportStoreItemUnavailable, updateStoreOrderStatus, type StoreOrder } from "../../../features/supermarket/api";
+import { apiMessage, fetchStoreOrder, regenerateStorePickupCode, reportStoreCannotFulfil, reportStoreItemUnavailable, reportStorePickupIssue, updateStoreOrderStatus, type StoreOrder } from "../../../features/supermarket/api";
 import { darkColors, radius, spacing, typography } from "../../../theme";
+import QRCode from "react-native-qrcode-svg";
 
 const nextStatusByCurrent: Record<string, { status: string; label: string } | undefined> = {
   pending_fulfilment: { status: "accepted", label: "Accept Order" },
@@ -33,6 +35,12 @@ export default function SupermarketOrderDetailsScreen() {
   const [showDecisionForm, setShowDecisionForm] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [pickupCode, setPickupCode] = useState("");
+  const [pickupCodeBusy, setPickupCodeBusy] = useState(false);
+  const [pickupSheetOpen, setPickupSheetOpen] = useState(false);
+  const [pickupIssueOpen, setPickupIssueOpen] = useState(false);
+  const [pickupIssueReason, setPickupIssueReason] = useState("");
+  const [pickupIssueBusy, setPickupIssueBusy] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!storeId || !orderId || !apiBaseUrl) {
@@ -80,7 +88,11 @@ export default function SupermarketOrderDetailsScreen() {
         parentStatus: response.parentStatus ?? current.parentStatus,
         paymentStatus: response.paymentStatus ?? current.paymentStatus,
       } : current);
-      if (status === "ready_for_dispatch") await loadOrder();
+      if (status === "ready_for_dispatch") {
+        setPickupCode(response.pickupCode || "");
+        setPickupSheetOpen(Boolean(response.pickupCode));
+        await loadOrder();
+      }
       setShowDecisionForm(false);
       setDecisionReason("");
     } catch (updateError) {
@@ -91,12 +103,33 @@ export default function SupermarketOrderDetailsScreen() {
     }
   };
 
-  const handover = async () => {
+  const generatePickupCode = async () => {
     if (!order || !storeId) return;
-    setSaving(true); setError(""); setNotice("");
-    try { const token = await getToken(); if (!token) throw new Error("Your session could not be verified. Sign in again."); await confirmStoreHandover(token, storeId, order.subOrderNumber); setNotice("Order handover confirmed. The rider can now start delivery."); await loadOrder(); }
-    catch (handoverError) { setError(apiMessage(handoverError)); }
-    finally { setSaving(false); }
+    setPickupCodeBusy(true); setError(""); setNotice("");
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Your session could not be verified. Sign in again.");
+      const result = await regenerateStorePickupCode(token, storeId, order.subOrderNumber);
+      setPickupCode(result.pickupCode);
+      setOrder((current) => current ? { ...current, deliveryProgress: result.deliveryProgress ?? current.deliveryProgress } : current);
+      setPickupSheetOpen(true);
+      setNotice("A new pickup code was created. Any previous code is now invalid.");
+    } catch (pickupError) { setError(apiMessage(pickupError)); }
+    finally { setPickupCodeBusy(false); }
+  };
+
+  const sendPickupIssue = async () => {
+    if (!order || !storeId || pickupIssueReason.trim().length < 3) { setError("Describe the pickup problem in at least 3 characters."); return; }
+    setPickupIssueBusy(true); setError("");
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Your session could not be verified. Sign in again.");
+      const result = await reportStorePickupIssue(token, storeId, order.subOrderNumber, pickupIssueReason.trim());
+      setPickupIssueOpen(false); setPickupIssueReason("");
+      setNotice(result.notificationQueued ? "Pickup issue recorded and an admin notification was queued." : "Pickup issue recorded. An admin notification could not be queued.");
+      await loadOrder();
+    } catch (issueError) { setError(apiMessage(issueError)); }
+    finally { setPickupIssueBusy(false); }
   };
 
   const sendCustomerDecisionRequest = async () => {
@@ -214,12 +247,15 @@ export default function SupermarketOrderDetailsScreen() {
           <Text style={styles.infoPrimary}>Rider delivery · {humanize(order.deliveryProgress.status)}</Text>
           {order.deliveryProgress.rider ? <Text style={styles.infoText}>Rider: {[order.deliveryProgress.rider.firstName, order.deliveryProgress.rider.lastName].filter(Boolean).join(" ")}{order.deliveryProgress.rider.phone ? ` · ${order.deliveryProgress.rider.phone}` : ""}</Text> : <Text style={styles.infoText}>Waiting for an admin to assign an approved rider.</Text>}
           {order.deliveryProgress.arrivedAt ? <Text style={styles.infoText}>Rider arrived {formatDate(order.deliveryProgress.arrivedAt)}</Text> : null}
-          {order.deliveryProgress.pickedUpAt ? <Text style={styles.infoText}>Order collected {formatDate(order.deliveryProgress.pickedUpAt)}</Text> : null}
+          {order.deliveryProgress.pickedUpAt ? <Text style={styles.infoText}>Picked up by {[order.deliveryProgress.rider?.firstName, order.deliveryProgress.rider?.lastName].filter(Boolean).join(" ") || "assigned rider"} · {formatDate(order.deliveryProgress.pickedUpAt)}</Text> : null}
           {order.deliveryProgress.failureReason ? <Text style={styles.unavailable}>Delivery issue: {order.deliveryProgress.failureReason}</Text> : null}
         </View> : null}
         {!paymentIsVerified ? <View style={styles.paymentNotice}><Text style={styles.paymentTitle}>Pending payment</Text><Text style={styles.paymentCopy}>Fulfilment actions unlock only after payment is verified by the server. Do not pack or dispatch this order yet.</Text></View> : null}
         {paymentIsVerified && nextAction ? <Button title={nextAction.label} onPress={() => void updateStatus(nextAction.status)} loading={saving} /> : null}
-        {paymentIsVerified && order.status === "ready_for_dispatch" && order.deliveryProgress?.status === "arrived_at_pickup" ? <Button title="Confirm rider handover" onPress={() => void handover()} loading={saving} /> : null}
+        {paymentIsVerified && order.status === "ready_for_dispatch" && order.deliveryProgress ? <>
+          {pickupCode ? <Button title="Pickup code" onPress={() => setPickupSheetOpen(true)} /> : order.deliveryProgress.assigned ? <Button title="Generate pickup code" onPress={() => void generatePickupCode()} loading={pickupCodeBusy} /> : <Text style={styles.terminalNotice}>The pickup code was generated when this order became ready. If this screen was closed, regenerate it after a rider is assigned.</Text>}
+          {["assigned", "accepted", "arrived_at_pickup"].includes(order.deliveryProgress.status) ? <Pressable accessibilityRole="button" disabled={pickupIssueBusy} onPress={() => setPickupIssueOpen(true)} style={styles.exceptionButton}><Text style={styles.exceptionLabel}>Report a problem with this pickup</Text></Pressable> : null}
+        </> : null}
         {paymentIsVerified && canRequestCustomerDecision ? <Pressable accessibilityRole="button" disabled={saving} onPress={() => { setError(""); setShowDecisionForm((current) => !current); }} style={styles.exceptionButton}><Text style={styles.exceptionLabel}>Can&apos;t fulfil this store order?</Text></Pressable> : null}
         {showDecisionForm && canRequestCustomerDecision ? <View style={styles.infoCard}>
           <Text style={styles.infoPrimary}>Request customer decision</Text>
@@ -228,9 +264,21 @@ export default function SupermarketOrderDetailsScreen() {
           <Button title="Send Request" onPress={() => void sendCustomerDecisionRequest()} loading={requestingDecision} />
         </View> : null}
         {paymentIsVerified && !nextAction && !canRequestCustomerDecision ? <Text style={styles.terminalNotice}>No further fulfilment action is available for this status.</Text> : null}
+        {order.deliveryProgress?.history?.length ? <><Text style={styles.sectionTitle}>Pickup timeline</Text>{order.deliveryProgress.history.map((event, index) => <View key={`${event.createdAt}-${index}`} style={styles.infoCard}><Text style={styles.infoPrimary}>{event.actorName || event.actorRole || "System"} · {humanize(event.action)}</Text><Text style={styles.infoText}>{formatDate(event.createdAt)}</Text>{event.reason ? <Text style={styles.infoText}>{event.reason}</Text> : null}{event.location ? <Text style={styles.infoText}>Rider location: {event.location.coordinates[1].toFixed(5)}, {event.location.coordinates[0].toFixed(5)}</Text> : null}</View>)}</> : null}
         <Text style={styles.timestamp}>Store order updated {formatDate(order.updatedAt)}</Text>
       </> : null}
     </RefreshableScrollView>
+    <BottomSheet visible={pickupSheetOpen} title="Pickup code" onClose={() => setPickupSheetOpen(false)} style={styles.bottomSheet}>
+      <Text style={styles.infoText}>Show this QR code to the assigned rider. If scanning is not possible, the rider can choose to enter the code manually.</Text>
+      {pickupCode ? <><View style={styles.qrPanel}><QRCode value={pickupCode} size={spacing.pickupQrSize} /></View><Text style={styles.pickupCode}>{pickupCode}</Text></> : <Text style={styles.infoText}>The code is only shown once. Regenerate it to create a new code.</Text>}
+      <Text style={styles.infoText}>Pickup status: {humanize(order?.deliveryProgress?.status || "awaiting_assignment")}</Text>
+      {order?.deliveryProgress?.assigned ? <Button title={pickupCodeBusy ? "Regenerating…" : "Regenerate code"} onPress={() => void generatePickupCode()} loading={pickupCodeBusy} /> : null}
+    </BottomSheet>
+    <BottomSheet visible={pickupIssueOpen} title="Report a pickup problem" onClose={() => setPickupIssueOpen(false)} style={styles.bottomSheet}>
+      <Text style={styles.infoText}>This records the issue on the delivery timeline and notifies Go-Shopper administration.</Text>
+      <TextInput multiline maxLength={500} value={pickupIssueReason} onChangeText={setPickupIssueReason} placeholder="Describe the pickup problem" placeholderTextColor={darkColors.placeholder} style={styles.reasonInput} />
+      <Button title="Send report" onPress={() => void sendPickupIssue()} loading={pickupIssueBusy} disabled={pickupIssueReason.trim().length < 3} />
+    </BottomSheet>
   </SafeAreaView>;
 }
 
@@ -286,6 +334,9 @@ const styles = StyleSheet.create({
   exceptionButton: { minHeight: spacing.buttonHeight, marginTop: spacing.xs, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: darkColors.warning, borderRadius: radius.button },
   exceptionLabel: { ...typography.button, color: darkColors.warning },
   reasonInput: { minHeight: spacing.xxl, marginVertical: spacing.sm, padding: spacing.sm, textAlignVertical: "top", color: darkColors.white, borderWidth: 1, borderColor: darkColors.inputBorder, borderRadius: radius.input, backgroundColor: darkColors.inputSurface },
+  bottomSheet: { gap: spacing.sm },
+  qrPanel: { alignSelf: "center", padding: spacing.md, borderRadius: radius.md, backgroundColor: darkColors.white },
+  pickupCode: { ...typography.orderTitle, color: darkColors.white, textAlign: "center", letterSpacing: 3 },
   terminalNotice: { ...typography.storeCaption, marginTop: spacing.sm, color: darkColors.mutedText, textAlign: "center" },
   timestamp: { ...typography.storeCaption, marginTop: spacing.md, color: darkColors.mutedText, textAlign: "center" },
   errorBox: { gap: spacing.sm, marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: darkColors.errorSurface },

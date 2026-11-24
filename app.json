@@ -39,6 +39,14 @@
       "expo-secure-store",
       "expo-web-browser",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Go-Shopper uses your camera to scan store pickup QR codes.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Go-Shopper uses your photo library so you can upload profile and product images.",

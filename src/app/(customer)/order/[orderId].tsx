@@ -159,7 +159,7 @@ export default function CustomerOrderDetailsScreen() {
             const store = getStoreById(subOrder.storeId);
             return <View key={subOrder.subOrderNumber} style={styles.storeCard}>
               <View style={styles.storeHeader}>
-                {store ? <Image source={store.logo} style={styles.storeLogo} /> : <View style={styles.storeLogoPlaceholder} />}
+                {subOrder.storeLogoUrl ? <Image accessibilityLabel={`${subOrder.storeName} logo`} source={{ uri: subOrder.storeLogoUrl }} style={styles.storeLogo} /> : <View style={[styles.storeLogo, styles.storeLogoPlaceholder]}><Text style={styles.storeLogoInitial}>{subOrder.storeName.charAt(0).toUpperCase() || "S"}</Text></View>}
                 <View style={styles.storeIdentity}><Text style={styles.storeName}>{subOrder.storeName}</Text><Text style={styles.subOrderNumber}>{subOrder.subOrderNumber}</Text></View>
                 <Text style={styles.storeStatus}>{humanize(subOrder.status)}</Text>
               </View>
@@ -247,7 +247,8 @@ const styles = StyleSheet.create({
   storeCard: { marginBottom: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: darkColors.storeSurface },
   storeHeader: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   storeLogo: { width: spacing.ordersLogoSize, height: spacing.ordersLogoSize, borderRadius: radius.sm },
-  storeLogoPlaceholder: { width: spacing.ordersLogoSize, height: spacing.ordersLogoSize, borderRadius: radius.sm, backgroundColor: darkColors.inputSurface },
+  storeLogoPlaceholder: { alignItems: "center", justifyContent: "center", backgroundColor: darkColors.inputSurface },
+  storeLogoInitial: { ...typography.storeSection, color: darkColors.mutedText },
   storeIdentity: { flex: 1 },
   storeName: { ...typography.storeBody, color: darkColors.white },
   subOrderNumber: { ...typography.storeCaption, color: darkColors.mutedText },

@@ -54,6 +54,8 @@ export type SubOrder = {
   parentOrderNumber: string;
   storeId: string;
   storeName: string;
+  storeLogoUrl?: string;
+  storeCoverImageUrl?: string;
   items: OrderItem[];
   merchandiseSubtotalKobo: number;
   deliveryFeeKobo: number;

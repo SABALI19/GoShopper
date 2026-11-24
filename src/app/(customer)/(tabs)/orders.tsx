@@ -169,11 +169,10 @@ export default function OrdersScreen() {
 
         <View style={styles.orderList}>{visibleOrders.map((order) => {
           const firstStore = order.subOrders[0];
-          const store = firstStore ? getStoreById(firstStore.storeId) : undefined;
           return (
             <View key={order.orderNumber} style={styles.orderCard}>
               <View style={styles.orderMain}>
-                <Image resizeMode="cover" source={store?.logo ?? require("../../../../assets/images/home/store-bokku.png")} style={styles.storeLogo} />
+                {firstStore?.storeLogoUrl ? <Image resizeMode="cover" source={{ uri: firstStore.storeLogoUrl }} style={styles.storeLogo} /> : <View style={[styles.storeLogo, styles.storeLogoPlaceholder]}><Text style={styles.storeLogoInitial}>{firstStore?.storeName?.charAt(0).toUpperCase() || "S"}</Text></View>}
                 <View style={styles.orderDetails}>
                   <Text numberOfLines={1} style={styles.storeName}>{order.subOrders.map((item) => item.storeName).join(", ") || "Go-Shopper Order"}</Text>
                   <Text style={styles.orderReference}>{formatDate(order.createdAt)} · {order.orderNumber}</Text>
@@ -255,6 +254,8 @@ const styles = StyleSheet.create({
   orderCard: { padding: spacing.sm, borderRadius: radius.md, backgroundColor: darkColors.storeSurface },
   orderMain: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   storeLogo: { width: spacing.ordersLogoSize, height: spacing.ordersLogoSize, borderRadius: radius.sm },
+  storeLogoPlaceholder: { alignItems: "center", justifyContent: "center", backgroundColor: darkColors.inputSurface },
+  storeLogoInitial: { ...typography.storeSection, color: darkColors.mutedText },
   orderDetails: { flex: 1 },
   storeName: { ...typography.orderCardTitle, color: darkColors.white },
   orderReference: { ...typography.orderCaption, color: darkColors.mutedText },

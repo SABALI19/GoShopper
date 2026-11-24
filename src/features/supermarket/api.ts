@@ -96,7 +96,7 @@ export type StoreOrder = {
   updatedAt: string;
   parentCreatedAt?: string;
   parentUpdatedAt?: string;
-  deliveryProgress?: { id: string; status: string; assigned: boolean; rider?: { firstName: string; lastName: string; phone: string } | null; assignedAt?: string | null; arrivedAt?: string | null; pickedUpAt?: string | null; dispatchedAt?: string | null; deliveredAt?: string | null; failedAt?: string | null; failureReason?: string } | null;
+  deliveryProgress?: { id: string; status: string; assigned: boolean; rider?: { firstName: string; lastName: string; phone: string } | null; assignedAt?: string | null; arrivedAt?: string | null; pickedUpAt?: string | null; dispatchedAt?: string | null; deliveredAt?: string | null; failedAt?: string | null; failureReason?: string; history?: { actorRole?: string; actorName?: string; action: string; fromStatus: string; toStatus: string; reason?: string; createdAt: string; location?: { type: "Point"; coordinates: number[] } }[] } | null;
   cancellation?: { reason?: string; cancelledAt?: string | null; cancelledBy?: string | null };
   customerAction?: { reason?: string; affectedStoreName?: string; amountKobo?: number; requestedAt?: string | null; decision?: string | null; decidedAt?: string | null };
 };
@@ -133,6 +133,8 @@ export async function updateStoreOrderStatus(token: string, storeId: string, ord
     deliveryProgress?: StoreOrder["deliveryProgress"];
     parentStatus?: string;
     paymentStatus?: string;
+    pickupCode?: string;
+    pickupCodeExpiresAt?: string;
   }>(
     `/api/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(orderId)}/fulfillment`,
     { token, method: "PATCH", body: { status, ...(reason ? { reason } : {}) } },
@@ -185,8 +187,12 @@ export async function removeProductImage(token: string, storeId: string, product
   return apiRequest<{ product: ManagedProduct }>(`/api/stores/mine/${encodeURIComponent(storeId)}/products/${encodeURIComponent(productId)}/image`, { token, method: "DELETE" });
 }
 
-export async function confirmStoreHandover(token: string, storeId: string, orderId: string) {
-  return apiRequest<{ order: StoreOrder; deliveryProgress: StoreOrder["deliveryProgress"] }>(`/api/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(orderId)}/handover`, { token, method: "POST", body: {} });
+export async function regenerateStorePickupCode(token: string, storeId: string, orderId: string) {
+  return apiRequest<{ pickupCode: string; expiresAt: string; pickupStatus: string; deliveryProgress: StoreOrder["deliveryProgress"] }>(`/api/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(orderId)}/pickup-code`, { token, method: "POST", body: {} });
+}
+
+export async function reportStorePickupIssue(token: string, storeId: string, orderId: string, reason: string) {
+  return apiRequest<{ issueRecorded: boolean; auditRecorded: boolean; notificationQueued: boolean; deliveryProgress: StoreOrder["deliveryProgress"] }>(`/api/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(orderId)}/pickup-issue`, { token, method: "POST", body: { reason } });
 }
 
 export async function reportStoreItemUnavailable(token: string, storeId: string, orderId: string, productId: string, reason: string) {

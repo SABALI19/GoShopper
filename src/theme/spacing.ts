@@ -51,6 +51,8 @@ export const spacing = {
   storePageInset: 16,
   storeHeroHeight: 194,
   storeLogoSize: 102,
+  pickupQrSize: 220,
+  pickupCameraHeight: 300,
   storeStatsGap: 10,
   storeStatHeight: 96,
   storeTabHeight: 45,
