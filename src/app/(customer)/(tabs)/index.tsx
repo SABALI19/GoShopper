@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../../components/ui/Icon";
+import { CustomerBrandHeader } from "../../../components/navigation/CustomerBrandHeader";
 import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 import { useRouter } from "expo-router";
@@ -90,12 +91,11 @@ export default function CustomerHomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.brand}>Go-Shopper</Text>
+        <CustomerBrandHeader action={
           <Pressable accessibilityLabel="Notifications" accessibilityRole="button">
             <Icon color={darkColors.white} name="bell" size={spacing.lg} />
           </Pressable>
-        </View>
+        } />
 
         <View style={styles.searchBox}>
           <Icon color={darkColors.mutedText} name="search" size={spacing.md} />
@@ -214,16 +214,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.homePageInset,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
-  },
-  header: {
-    minHeight: spacing.xl,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  brand: {
-    ...typography.homeBrand,
-    color: darkColors.primary,
   },
   searchBox: {
     height: spacing.homeSearchHeight,

@@ -9,7 +9,11 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#181411",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.goshopper",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "backgroundColor": "#181411",
@@ -19,7 +23,8 @@
       },
       "package": "com.goshopper",
       "versionCode": 1,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": []
     },
     "web": {
       "output": "single",

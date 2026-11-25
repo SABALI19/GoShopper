@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "../../../components/ui/Icon";
+import { CustomerBrandHeader } from "../../../components/navigation/CustomerBrandHeader";
 import { RefreshableScrollView } from "../../../components/ui/RefreshableScrollView";
 import { darkColors, radius, spacing, typography } from "../../../theme";
 import { stores } from "../../../features/stores/data";
@@ -86,6 +87,7 @@ export default function ExploreScreen() {
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <StatusBar style="light" />
       <RefreshableScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <CustomerBrandHeader />
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
             <Icon color={darkColors.mutedText} name="search" size={spacing.exploreSearchIconSize} />

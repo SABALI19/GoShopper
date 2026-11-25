@@ -13,6 +13,8 @@ const brand = {
   storeSurface: "#1E2A40",
   storeCard: "#202B40",
   storeTransparent: "transparent",
+  brandHeaderSurface: "rgba(30, 42, 64, 0.56)",
+  brandHeaderBorder: "rgba(255, 255, 255, 0.14)",
   overlay: "rgba(0, 0, 0, 0.68)",
   successSurface: "#173C2D",
   warningSurface: "#5A321C",
