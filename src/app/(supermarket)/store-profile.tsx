@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,9 +12,11 @@ import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { RefreshableScrollView } from "../../components/ui/RefreshableScrollView";
 import { SectionCard, SkeletonCard, StatusChip } from "../../components/ui/WorkflowComponents";
+import { Icon } from "../../components/ui/Icon";
 import { darkColors, radius, spacing, typography } from "../../theme";
 
 export default function SupermarketStoreProfileScreen() {
+  const router = useRouter();
   const { getToken } = useAuth();
   const stores = useSupermarketStore(state => state.stores);
   const selectedStoreId = useSupermarketStore(state => state.selectedStoreId);
@@ -33,6 +36,11 @@ export default function SupermarketStoreProfileScreen() {
   const [bannerBusy, setBannerBusy] = useState(false);
   const [bannerPreview, setBannerPreview] = useState("");
   const [bannerError, setBannerError] = useState("");
+
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(supermarket)/(tabs)/index" as never);
+  };
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError("");
@@ -59,7 +67,9 @@ export default function SupermarketStoreProfileScreen() {
     try {
       const token = await getToken(); if (!token) throw new Error("Your session expired. Sign in again.");
       await updateManagedStore(token, storeId, { name: form.name.trim(), category: form.category.trim(), tagline: form.tagline.trim(), description: form.description.trim(), openHours: form.openHours.trim(), isOpen: form.isOpen, address: { line1: form.line1.trim(), city: form.city.trim(), state: form.state.trim(), country: form.country.trim() } });
-      setNotice("Store profile saved."); await load();
+      setNotice("Store profile saved.");
+      await load();
+      Alert.alert("Store profile saved", "Your store details have been updated.", [{ text: "Return to store menu", onPress: goBack }], { cancelable: false });
     } catch (cause) { setError(apiMessage(cause)); }
     finally { setSaving(false); }
   };
@@ -113,7 +123,13 @@ export default function SupermarketStoreProfileScreen() {
 
   return <SafeAreaView edges={["top"]} style={styles.screen}>
     <RefreshableScrollView refreshAction={load} contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Store profile</Text><Text style={styles.subtitle}>Keep your storefront information and opening hours up to date.</Text>
+      <View style={styles.titleRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back to store menu" onPress={goBack} style={styles.backButton}>
+          <Icon color={darkColors.white} name="back" size={spacing.lg} />
+        </Pressable>
+        <Text style={styles.title}>Store profile</Text>
+      </View>
+      <Text style={styles.subtitle}>Keep your storefront information and opening hours up to date.</Text>
       {loading ? <><SkeletonCard /><SkeletonCard /></> : null}
       {!loading && !activeStoreId && !loadError ? <EmptyState icon="store" title="No approved store yet" description="Your store profile tools will be available once your application is approved." /> : null}
       {!loading && activeStoreId && !loadError ? <>
@@ -153,7 +169,7 @@ function input<K extends FormKey>(label: string, key: K, value: string, setForm:
   return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={text => setForm(current => ({ ...current, [key]: text }))} multiline={multiline} placeholderTextColor={darkColors.placeholder} style={[styles.input, multiline && styles.multiline]} /></View>;
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: darkColors.background }, page: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md }, title: { ...typography.orderTitle, color: darkColors.white }, subtitle: { ...typography.storeCaption, color: darkColors.mutedText },
+  screen: { flex: 1, backgroundColor: darkColors.background }, page: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md }, titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm }, backButton: { width: spacing.xxl, height: spacing.xxl, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: darkColors.primary }, title: { ...typography.orderTitle, color: darkColors.white, flex: 1 }, subtitle: { ...typography.storeCaption, color: darkColors.mutedText },
   field: { gap: spacing.xxs }, label: { ...typography.storeCaption, color: darkColors.mutedText }, input: { minHeight: spacing.homeSearchHeight, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: darkColors.inputBorder, borderRadius: radius.input, backgroundColor: darkColors.inputSurface, color: darkColors.white, ...typography.input }, multiline: { minHeight: spacing.metricCardHeight, paddingTop: spacing.sm, textAlignVertical: "top" },
   openRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }, openCopy: { flex: 1, gap: spacing.xxs }, hint: { ...typography.storeCaption, color: darkColors.mutedText }, error: { ...typography.storeCaption, color: darkColors.error }, success: { ...typography.storeCaption, color: darkColors.success },
   logoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md }, logo: { width: spacing.profileIconSize * 2, height: spacing.profileIconSize * 2, borderRadius: radius.md, backgroundColor: darkColors.inputSurface }, logoPlaceholder: { width: spacing.profileIconSize * 2, height: spacing.profileIconSize * 2, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: darkColors.primaryTint }, logoInitial: { ...typography.orderTitle, color: darkColors.primary }, logoActions: { flex: 1, gap: spacing.xs }, removeLogo: { ...typography.storeCaption, padding: spacing.xs, color: darkColors.primary, textAlign: "center" }, banner: { width: "100%", aspectRatio: 2.5, borderRadius: radius.card, backgroundColor: darkColors.inputSurface }, bannerPlaceholder: { width: "100%", aspectRatio: 2.5, alignItems: "center", justifyContent: "center", padding: spacing.md, borderRadius: radius.card, backgroundColor: darkColors.inputSurface },
